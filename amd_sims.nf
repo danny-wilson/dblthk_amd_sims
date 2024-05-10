@@ -34,8 +34,6 @@ shell:
 	setwd("/well/bag/wilson/GitHub/dblthk_amd_sims")
 	# Load required source code: this in turn sources summary_mvMR_BF.R
 	source("biomarker-sim-functions.R")
-	# Return to working directory
-	setwd(wd)
 
 	# Read arguments
 	taskid = as.integer("!{taskid}")
@@ -51,6 +49,9 @@ shell:
 
 	# Load example AMD data
 	full.data = load.data()
+
+	# Return to working directory
+	setwd(wd)
 
 	# Perform univariable association tests
 	results.univariable.MR = univariable.MR(full.data)
