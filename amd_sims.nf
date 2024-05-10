@@ -93,8 +93,7 @@ params.n = 149
 ch_taskid = Channel.of(1..params.ntasks)
 ch_params = Channel.of(params.params)
 ch_n = Channel.of(params.n)
-ch_args = ch_n
-				   .combine(ch_params)
+ch_args = ch_params.combine(ch_n)
 
 // Go
 workflow {
