@@ -81,7 +81,61 @@ shell:
 	saveRDS(sim.analyses, file="sim.analyses.RDS")
 	saveRDS(sim.perf, file="sim.perf.RDS")
 	
-	cat("Doublethink AMD simulation completed successfully\n")
+	cat("simulate: Doublethink AMD simulation completed successfully\n")
+'''
+}
+
+process combine_performance {
+	beforeScript "module add R/4.2.1-foss-2022a"
+	input:
+		tuple path(infiles)
+	output:
+		path("combined.performance.RDS"), emit: combined_perf
+	shell:
+'''
+	#!/usr/bin/env Rscript
+	
+	# Get working directory
+	wd = getwd()
+	setwd("/well/bag/wilson/GitHub/dblthk_amd_sims")
+	# Load required source code: this in turn sources summary_mvMR_BF.R
+	source("biomarker-sim-functions.R")
+	# Return to working directory
+	setwd(wd)
+
+	# Read arguments
+	infiles.all = "!{infiles}"
+	outfile = "!{outfile}"
+	
+	# Check arguments
+	infiles = unlist(strsplit(infiles.all, ' '))
+	nfiles = length(infiles)
+	stopifnot(file.exists(infiles))
+	stopifnot(!file.exists(outfile))
+	cat("combine_performance: combining", nfiles, "files\n")
+	
+	# Load simulation performance metrics
+	perf = list()
+	nanalyses = list()
+	for(i in 1:nfiles) {
+		perf[[i]] = readRDS(infiles[i])
+		stopifnot(is(perf[[i]], "bmsim_performance"))
+		nanalyses[[i]] = length(perf[[i]])
+		stopifnot(nanalyses[[i]]==nanalyses[[1]])
+	}
+	
+	# Combine analysis results
+	results = list()
+	for(i in 1:nanalyses) {
+		# Combine the performance metrics
+		analysis.name = names(perf[[1]])[i]
+		results[[analysis.name]] = combine.performance(lapply(perf, function(PERF) PERF[[analysis.name]]))
+	}
+	
+	# Save results
+	saveRDS(results, file="combined.performance.RDS")
+
+	cat("combine_performance: Completed successfully\n")
 '''
 }
 
@@ -107,4 +161,6 @@ workflow {
 	// Perform the simulations
 	simulate(ch_taskid, ch_args)
 
+	// Combine performance metrics
+	combine_performance(simulate.sim_perf)
 }
