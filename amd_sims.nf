@@ -75,7 +75,7 @@ shell:
 	sim.anal = do.analyses(sim.data, nu=full.data@m, mr.bma.nsim=0)
 
 	# Compute performance metrics for the analyses
-	sim.perf = calc.performance(sim.anal, params, freqt.alpha=0.05, bayes.tau=19)
+	sim.perf = calc.performance(sim.anal, params, freqt.alpha=0.01, bayes.tau=19)
 
 	# Save files
 	saveRDS(sim.data, file=filename.sim_data)
@@ -87,12 +87,13 @@ shell:
 }
 
 process combine_performance {
-	beforeScript "module add R/4.2.1-foss-2022a"
-	input:
-		path(infiles)
-	output:
-		path("combined.performance.RDS"), emit: combined_perf
-	shell:
+beforeScript "module add R/4.2.1-foss-2022a"
+publishDir "${params.publishDir}", mode: "copy"
+input:
+	path(infiles)
+output:
+	path("combined.performance.RDS"), emit: combined_perf
+shell:
 '''
 	#!/usr/bin/env Rscript
 	
@@ -144,6 +145,7 @@ process combine_performance {
 params.ntasks = 2
 params.params = [0.0] * params.ntasks
 params.n = [149] * params.ntasks
+params.publishDir = 'grand.null'
 
 // Define the channels
 ch_taskid = Channel.of(1..params.ntasks)
