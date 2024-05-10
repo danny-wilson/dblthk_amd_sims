@@ -87,13 +87,13 @@ shell:
 
 // Default values
 params.ntasks = 1000
-params.params = 0.0
-params.n = 149
+params.params = [0.0] * params.ntasks
+params.n = [149] * params.ntasks
 
 // Define the channels
 ch_taskid = Channel.of(1..params.ntasks)
-ch_params = Channel.of(params.params)
-ch_n = Channel.of(params.n)
+ch_params = Channel.fromList(params.params)
+ch_n = Channel.fromList(params.n)
 ch_args = ch_params.combine(ch_n)
 
 // Print arguments
