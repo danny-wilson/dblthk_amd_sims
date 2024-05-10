@@ -21,10 +21,9 @@ input:
 	tuple val(params), val(n)
 output:
 	tuple val(params), val(n)
-	path("taskid"), emit: taskid
-	path("sim.data.RDS"), emit: sim_data
-	path("sim.analyses.RDS"), emit: sim_analyses
-	path("sim.perf.RDS"), emit: sim_perf
+	path("${taskid}.sim.data.RDS"), 	emit: sim_data
+	path("${taskid}.sim.analyses.RDS"), emit: sim_analyses
+	path("${taskid}.sim.perf.RDS"), 	emit: sim_perf
 shell:
 '''
 	#!/usr/bin/env Rscript
@@ -76,10 +75,9 @@ shell:
 	sim.perf = calc.performance(sim.analyses, params, freqt.alpha=0.05, bayes.tau=19)
 
 	# Save files
-	write(taskid, file="taskid")
-	saveRDS(sim.data, file="sim.data.RDS")
-	saveRDS(sim.analyses, file="sim.analyses.RDS")
-	saveRDS(sim.perf, file="sim.perf.RDS")
+	saveRDS(sim.data, 		file="${taskid}.sim.data.RDS")
+	saveRDS(sim.analyses, 	file="${taskid}.sim.analyses.RDS")
+	saveRDS(sim.perf, 		file="${taskid}.sim.perf.RDS")
 	
 	cat("simulate: Doublethink AMD simulation completed successfully\n")
 '''
