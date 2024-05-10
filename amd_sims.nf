@@ -162,5 +162,5 @@ workflow {
 	simulate(ch_taskid, ch_args)
 
 	// Combine performance metrics
-	combine_performance(simulate.sim_perf)
+	combine_performance(simulate.out.sim_perf.collect())
 }
