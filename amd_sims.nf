@@ -96,6 +96,12 @@ ch_params = Channel.of(params.params)
 ch_n = Channel.of(params.n)
 ch_args = ch_params.combine(ch_n)
 
+// Print arguments
+println 'Arguments'
+println 'ntasks:			' + params.ntasks
+println 'params:			' + params.params
+println 'n:					' + params.n
+
 // Go
 workflow {
 	// Perform the simulations
