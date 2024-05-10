@@ -22,7 +22,7 @@ input:
 output:
 	tuple val(params), val(n)
 	path("${taskid}.sim.data.RDS"), 	emit: sim_data
-	path("${taskid}.sim.analyses.RDS"), emit: sim_analyses
+	path("${taskid}.sim.anal.RDS"),		emit: sim_anal
 	path("${taskid}.sim.perf.RDS"), 	emit: sim_perf
 shell:
 '''
@@ -38,6 +38,9 @@ shell:
 	taskid = as.integer("!{taskid}")
 	params = as.numeric("!{params}")
 	n = as.integer("!{n}")
+	filename.sim_data = "!{taskid}.sim.data.RDS"
+	filename.sim_anal = "!{taskid}.sim.anal.RDS"
+	filename.sim_perf = "!{taskid}.sim.perf.RDS"
 
 	# Check arguments
 	stopifnot(!is.na(taskid))
@@ -69,15 +72,15 @@ shell:
 	sim.data = simulate(n, params)
 	
 	# Perform the standard set of analyses
-	sim.analyses = do.analyses(sim.data, nu=full.data@m, mr.bma.nsim=0)
+	sim.anal = do.analyses(sim.data, nu=full.data@m, mr.bma.nsim=0)
 
 	# Compute performance metrics for the analyses
-	sim.perf = calc.performance(sim.analyses, params, freqt.alpha=0.05, bayes.tau=19)
+	sim.perf = calc.performance(sim.anal, params, freqt.alpha=0.05, bayes.tau=19)
 
 	# Save files
-	saveRDS(sim.data, 		file="${taskid}.sim.data.RDS")
-	saveRDS(sim.analyses, 	file="${taskid}.sim.analyses.RDS")
-	saveRDS(sim.perf, 		file="${taskid}.sim.perf.RDS")
+	saveRDS(sim.data, file=filename.sim_data)
+	saveRDS(sim.anal, file=filename.sim_anal)
+	saveRDS(sim.perf, file=filename.sim_perf)
 	
 	cat("simulate: Doublethink AMD simulation completed successfully\n")
 '''
