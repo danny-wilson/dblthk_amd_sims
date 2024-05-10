@@ -120,14 +120,14 @@ process combine_performance {
 	nanalyses = list()
 	for(i in 1:nfiles) {
 		perf[[i]] = readRDS(infiles[i])
-		stopifnot(is(perf[[i]], "bmsim_performance"))
 		nanalyses[[i]] = length(perf[[i]])
 		stopifnot(nanalyses[[i]]==nanalyses[[1]])
+		for(j in 1:nanalyses[[1]]) stopifnot(is(perf[[i]][[j]], "bmsim_performance"))
 	}
 	
 	# Combine analysis results
 	results = list()
-	for(i in 1:nanalyses) {
+	for(i in 1:nanalyses[[1]]) {
 		# Combine the performance metrics
 		analysis.name = names(perf[[1]])[i]
 		results[[analysis.name]] = combine.performance(lapply(perf, function(PERF) PERF[[analysis.name]]))
