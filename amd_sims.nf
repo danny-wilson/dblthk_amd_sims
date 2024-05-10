@@ -86,7 +86,7 @@ shell:
 }
 
 // Default values
-params.ntasks = 1000
+params.ntasks = 2
 params.params = [0.0] * params.ntasks
 params.n = [149] * params.ntasks
 
