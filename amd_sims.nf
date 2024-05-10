@@ -88,7 +88,7 @@ shell:
 process combine_performance {
 	beforeScript "module add R/4.2.1-foss-2022a"
 	input:
-		tuple path(infiles)
+		path(infiles)
 	output:
 		path("combined.performance.RDS"), emit: combined_perf
 	shell:
@@ -105,7 +105,7 @@ process combine_performance {
 
 	# Read arguments
 	infiles.all = "!{infiles}"
-	outfile = "!{outfile}"
+	outfile = "combined.performance.RDS"
 	
 	# Check arguments
 	infiles = unlist(strsplit(infiles.all, ' '))
