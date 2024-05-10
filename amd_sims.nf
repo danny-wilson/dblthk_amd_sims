@@ -72,7 +72,7 @@ shell:
 	sim.data = simulate(n, params)
 	
 	# Perform the standard set of analyses
-	sim.anal = do.analyses(sim.data, nu=full.data@m, mr.bma.nsim=0)
+	sim.anal = do.analyses(sim.data, nu=full.data@m, mr.bma.nsim=1000)
 
 	# Compute performance metrics for the analyses
 	sim.perf = calc.performance(sim.anal, params, freqt.alpha=0.01, bayes.tau=19)
@@ -142,7 +142,7 @@ shell:
 }
 
 // Default values
-params.ntasks = 2
+params.ntasks = 1000
 params.params = [0.0] * params.ntasks
 params.n = [149] * params.ntasks
 params.publishDir = 'grand.null'
