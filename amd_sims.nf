@@ -22,9 +22,9 @@ input:
 output:
 	tuple val(params), val(n)
 	path("taskid"), emit: taskid
-	path("sim.data.RDS"), emit: sim.data
-	path("sim.analyses.RDS"), emit: sim.analyses
-	path("sim.perf.RDS"), emit: sim.perf
+	path("sim.data.RDS"), emit: sim_data
+	path("sim.analyses.RDS"), emit: sim_analyses
+	path("sim.perf.RDS"), emit: sim_perf
 shell:
 '''
 	#!/usr/bin/env Rscript
