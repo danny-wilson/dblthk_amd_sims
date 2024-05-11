@@ -360,7 +360,7 @@ doublethink.x = function(data, h=1, mu=.1/(1-.1), nu=data@m) {
 	# Compute the return objects: model selection results
 	doublethink.modelselection = list()
 	for(j in 1:nanal) {
-		gd = which.max(PP)
+		gd = which.max(PP[, j])
 		doublethink.modelselection[[j]] = add1drop1(data, s[gd,], nu, analysis.name="Bayesian model selection multivariable Mendelian randomization with Doublethink; leave one out/add one in significance testing")
 	}
 	names(doublethink.modelselection) <- hyper.names
