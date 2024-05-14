@@ -551,7 +551,7 @@ setClass("bmsim_performance",
 		# Std Error performance
 		stderr.coverage = double(0),
 		# Frequentist test performance
-		freqt.marginal = new("bmsim_test_performance")
+		freqt.marginal = new("bmsim_test_performance"),
 		freqt.pairwise = new("bmsim_test_performance"),
 		freqt.headline = new("bmsim_test_performance"),
 		# Bayesian test performance
