@@ -508,7 +508,19 @@ setClass("bmsim_test_performance",
 		fdr = "numeric",
 		fndr = "numeric",
 		fpr = "numeric",
-		fnr = "numeric",
+		fnr = "numeric"
+	),
+	prototype(
+		# Frequentist test performance
+		bias = double(0),
+		typeI = double(0),
+		typeII = double(0),
+		familywiseI = double(0),
+		familywiseII = double(0),
+		fdr = double(0),
+		fndr = double(0),
+		fpr = double(0),
+		fnr = double(0)
 	)
 )
 
