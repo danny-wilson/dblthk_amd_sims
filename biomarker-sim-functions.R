@@ -580,7 +580,7 @@ setClass("bmsim_performance",
 
 calc.test.performance = function(test.signif, param.signif, param.names=NULL) {
 	stopifnot(length(test.signif)==length(param.signif))
-	if(!is.null(params.names)) stopifnot(length(test.signif)==length(param.names))
+	if(!is.null(param.names)) stopifnot(length(test.signif)==length(param.names))
 	typeI = performance.typeI(test.signif, param.signif)
 	typeII = performance.typeII(test.signif, param.signif)
 	ret = new("bmsim_test_performance",
