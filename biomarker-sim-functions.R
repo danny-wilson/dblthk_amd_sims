@@ -538,6 +538,31 @@ setClass("bmsim_performance",
 		prediction.L2 = "numeric",
 		# Computation time (seconds)
 		time.secs = "numeric"
+	),
+	prototype(
+		analysis = character(0),
+		data = character(0),
+		m = integer(0),
+		names = character(0),
+		# Estimator performance
+		estimate.bias = double(0),
+		estimate.L1 = double(0),
+		estimate.L2 = double(0),
+		# Std Error performance
+		stderr.coverage = double(0),
+		# Frequentist test performance
+		freqt.marginal = new("bmsim_test_performance")
+		freqt.pairwise = new("bmsim_test_performance"),
+		freqt.headline = new("bmsim_test_performance"),
+		# Bayesian test performance
+		bayes.marginal = new("bmsim_test_performance"),
+		bayes.pairwise = new("bmsim_test_performance"),
+		bayes.headline = new("bmsim_test_performance"),
+		# Prediction performance
+		prediction.L1 = double(0),
+		prediction.L2 = double(0),
+		# Computation time (seconds)
+		time.secs = double(0)
 	)
 )
 
