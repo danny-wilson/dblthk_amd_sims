@@ -43,7 +43,7 @@ shell:
 	nsim = as.integer("!{params.ntasks}")
 	stopifnot(!is.na(nsim))
 	stopifnot(nsim>0)
-	stopifnot(nsim<=taskid)
+	stopifnot(nsim>=taskid)
 	n = as.numeric("!{params.n}")
 	stopifnot(!is.na(n))
 	stopifnot(n>0)
