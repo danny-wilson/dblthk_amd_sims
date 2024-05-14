@@ -541,7 +541,10 @@ setGeneric("performance", function(obj, ...) standardGeneric("performance"))
 setMethod("performance", "bmsim_analysisResults", function(obj, parameter, newdata=NULL, thresh.neglog10padj=NA, thresh.log10po=NA) {
 	validate(obj)
 	stopifnot(length(parameter)==obj@m)
-	if(!is.null(newdata)) stopifnot(newdata@m==obj@m)
+	if(!is.null(newdata)) {
+		stopifnot(newdata@m==obj@m)
+		validate(newdata)
+	}
 	
 	ret = new("bmsim_performance",
 		analysis = obj@analysis,
@@ -753,7 +756,7 @@ do.analyses = function(data, nu=data@m, dblthk.h = c(0.25, 1, 4), dblthk.mu = c(
 }
 
 # Perform a standardized set of analyses of a single dataset
-calc.performance = function(analyses, params, freqt.alpha = 0.05, bayes.tau = 19) {
+calc.performance = function(analyses, params, freqt.alpha = 0.05, bayes.tau = 19, newdata=NULL) {
 	stopifnot(is.list(analyses))
 	nanal = length(analyses)
 	for(analysis in analyses) {
@@ -761,12 +764,55 @@ calc.performance = function(analyses, params, freqt.alpha = 0.05, bayes.tau = 19
 		validate(analysis)
 		stopifnot(analysis@m==length(params))
 	}
+	if(!is.null(newdata)) {
+		stopifnot(newdata@m==length(params))
+		validate(newdata)
+	}
+	
 	thresh.neglog10padj = -log10(freqt.alpha)
 	thresh.log10po = log10(bayes.tau)
 	ret = list()
 	for(i in 1:nanal) {
 		analysis.name = names(analyses)[i]
-		ret[[analysis.name]] = performance(analyses[[analysis.name]], params, thresh.neglog10padj=thresh.neglog10padj, thresh.log10po=thresh.log10po)
+		ret[[analysis.name]] = performance(analyses[[analysis.name]], parameter=params, newdata=newdata, thresh.neglog10padj=thresh.neglog10padj, thresh.log10po=thresh.log10po)
 	}
 	return(ret)
+}
+
+# Populate parameters for use in the simulations. Idea is to execute this once and hard-code it into the git repository
+# Set seed to NULL to avoid deterministic results
+# simulate.parameters(3, 15, "prior", filename=stdout(), data=data, seed=NULL)
+simulate.parameters = function(nsim=1000, m=15, model=c("grand_null", "bad_case", "prior")[1], filename=paste0(model, ".parameters.txt"), overwrite=FALSE, data=NULL, tau=19, h=1, mu=0.1, n=145, seed=0) {
+	if(!is.null(data)) {
+		stopifnot(data@m==m)
+		validate(data)
+	}
+	if(!is.null(seed)) set.seed(seed)
+	if(filename!=stdout()) stopifnot(!file.exists(filename) | overwrite==TRUE)
+	ret = matrix(as.double(NA), nsim, m)
+	model = tolower(model)
+	if(model=="grand_null") {
+		# All parameters are zero
+		ret = matrix(as.double(0.0), nsim, m)
+	} else if(model=="bad_case") {
+		# Odd numbered parameters are zero
+		# Even numbered parameters are non-zero
+		# For each non-zero variable, find the highest absolute correlation rho and set beta = rho/(1-rho^2)/sqrt(n)*sqrt(2*log(tau/c))
+		# Theory for the two-variable case suggests this generates inflation, albeit not the worst inflation (for which no expression is available)
+		stopifnot(!is.null(data))
+		c = mu*sqrt(h/(n+h))
+		RHO = cor(data@x); diag(RHO) <- NA
+		rho.max = RHO[cbind(1:m, apply(abs(RHO), 1, which.max))]
+		params = ifelse((1:m) %% 2==0, rho.max/(1-rho.max^2)/sqrt(n)*sqrt(2*log(tau/c)), 0.0)
+		ret = matrix(params, nsim, m, byrow=TRUE)
+	} else if(model=="prior") {
+		# Simulate from the Johnson (2005) prior given n, h, mu and data@x
+		stopifnot(!is.null(data))
+		unit.info = crossprod(data@x)/data@n
+		prior.var = solve(unit.info)/h
+		params = rmvnorm(nsim, rep(0.0, m), prior.var)
+		params[sample(length(params), rbinom(1, length(params), 1/(1+mu)), replace=FALSE)] = 0.0
+		ret = params
+	} else error("simulate.parameters(): unrecognized model. Try one of 'grand_null', 'bad_case' or 'prior'")
+	write(t(ret), file=filename, ncolumns=m)
 }

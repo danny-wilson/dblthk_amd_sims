@@ -1,13 +1,11 @@
 process simulate_dry_run {
-	input:
-		val taskid
-		tuple val(params), val(n)
-	output:
-		tuple val(params), val(n)
-		path("taskid"), emit: taskid
-		path("sim.data.RDS"), emit: sim.data
-		path("sim.analyses.RDS"), emit: sim.analyses
-		path("sim.perf.RDS"), emit: sim.perf
+input:
+	val taskid
+	path parameters_filename
+output:
+	path("${taskid}.sim.data.RDS"), 	emit: sim_data
+	path("${taskid}.sim.anal.RDS"),		emit: sim_anal
+	path("${taskid}.sim.perf.RDS"), 	emit: sim_perf
 shell:
 '''
 	echo !{taskid} !{params} !{n}
@@ -18,9 +16,8 @@ process simulate {
 beforeScript "module add R/4.2.1-foss-2022a"
 input:
 	val taskid
-	tuple val(params), val(n)
+	path parameters_filename
 output:
-	tuple val(params), val(n)
 	path("${taskid}.sim.data.RDS"), 	emit: sim_data
 	path("${taskid}.sim.anal.RDS"),		emit: sim_anal
 	path("${taskid}.sim.perf.RDS"), 	emit: sim_perf
@@ -36,18 +33,45 @@ shell:
 
 	# Read arguments
 	taskid = as.integer("!{taskid}")
-	params = as.numeric("!{params}")
-	n = as.integer("!{n}")
+	stopifnot(taskid>0)
+	infile = as.character("!{parameters_filename}")
 	filename.sim_data = "!{taskid}.sim.data.RDS"
 	filename.sim_anal = "!{taskid}.sim.anal.RDS"
 	filename.sim_perf = "!{taskid}.sim.perf.RDS"
 
 	# Check arguments
 	stopifnot(!is.na(taskid))
-	stopifnot(!any(is.na(params)))
-	stopifnot(length(params)==1)
-	params = rep(params, 15)
+	stopifnot(!file.exists(infile))
 	stopifnot(n>15)
+
+	# Implied arguments
+	nsim = as.integer("!{params.ntasks}")
+	stopifnot(!is.na(nsim))
+	stopifnot(nsim>0)
+	stopifnot(nsim<taskid)
+	n = as.numeric("!{params.n}")
+	stopifnot(!is.na(n))
+	stopifnot(n>0)
+
+	# Read parameters
+	stopifnot(file.exists(infile))
+	all_params = as.matrix(read.delim(infile, header=FALSE, sep="\t", quote=FALSE))
+	stopifnot(nrow(all_params)==nsim)
+	stopifnot(ncol(all_params)==15)
+	stopifnot(!any(is.na(all_params)))
+	params = all_params[taskid,]
+	
+	# Print arguments
+	cat("simulate() read arguments:\n")
+	cat("taskid:              ", taskid, "\n")
+	cat("infile:              ", infile, "\n")
+	cat("filename.sim_data:   ", filename.sim_data, "\n")
+	cat("filename.sim_anal:   ", filename.sim_anal, "\n")
+	cat("filename.sim_perf:   ", filename.sim_perf, "\n")
+	cat("nsim:                ", nsim, "\n")
+	cat("n:                   ", n, "\n")
+	cat("params:              ", params, "\n")
+	cat("\n")
 
 	# Load example AMD data
 	full.data = load.data()
@@ -70,12 +94,13 @@ shell:
 	set.seed(taskid)
 	# Simulate the dependent variables
 	sim.data = simulate(n, params)
+	new.data = simulate(n, params)
 	
 	# Perform the standard set of analyses
 	sim.anal = do.analyses(sim.data, nu=full.data@m, mr.bma.nsim=1000)
 
 	# Compute performance metrics for the analyses
-	sim.perf = calc.performance(sim.anal, params, freqt.alpha=0.01, bayes.tau=19)
+	sim.perf = calc.performance(sim.anal, params, freqt.alpha=0.01, bayes.tau=19, newdata=new.data)
 
 	# Save files
 	saveRDS(sim.data, file=filename.sim_data)
@@ -116,6 +141,12 @@ shell:
 	stopifnot(!file.exists(outfile))
 	cat("combine_performance: combining", nfiles, "files\n")
 	
+	# Print arguments
+	cat("combine_performance() read arguments:\n")
+	cat("infiles:              ", infiles, "\n")
+	cat("outfile:              ", outfile, "\n")
+	cat("\n")
+
 	# Load simulation performance metrics
 	perf = list()
 	nanalyses = list()
@@ -141,28 +172,105 @@ shell:
 '''
 }
 
+process simulate_parameters {
+beforeScript "module add R/4.2.1-foss-2022a"
+publishDir "${params.publishDir}", mode: "copy"
+input:
+output:
+	path("${params.model}.parameters.txt"), emit: model_params
+shell:
+'''
+	#!/usr/bin/env Rscript
+
+	# Get working directory
+	wd = getwd()
+	setwd("/well/bag/wilson/GitHub/dblthk_amd_sims")
+	# Load required source code: this in turn sources summary_mvMR_BF.R
+	source("biomarker-sim-functions.R")
+	
+	# Implied arguments
+	nsim = as.integer("!{params.ntasks}")
+	stopifnot(!is.na(nsim))
+	stopifnot(nsim>0)
+	model = as.character("!{params.model}")
+	filename.parameters = "!{params.model}.parameters.txt"
+	tau = as.numeric("!{params.simulate_parameters_tau}")
+	stopifnot(!is.na(tau))
+	stopifnot(tau>0)
+	h = as.numeric("!{params.simulate_parameters_h}")
+	stopifnot(!is.na(h))
+	stopifnot(h>0)
+	mu = as.numeric("!{params.simulate_parameters_mu}")
+	stopifnot(!is.na(mu))
+	stopifnot(mu>0)
+	n = as.numeric("!{params.n}")
+	stopifnot(!is.na(n))
+	stopifnot(n>0)
+	seed = as.integer("!{params.simulate_parameters_seed}")
+	stopifnot(!is.na(seed))
+
+	# Print arguments
+	cat("simulate_parameters() read arguments:\n")
+	cat("nsim:                ", nsim, "\n")
+	cat("model:               ", model, "\n")
+	cat("filename.parameters: ", filename.parameters, "\n")
+	cat("tau:                 ", tau, "\n")
+	cat("h:                   ", h, "\n")
+	cat("mu:                  ", mu, "\n")
+	cat("n:                   ", n, "\n")
+	cat("seed:                ", seed, "\n")
+	cat("\n")
+
+	# Load example AMD data
+	full.data = load.data()
+
+	# Return to working directory
+	setwd(wd)
+
+	# Perform univariable association tests
+	results.univariable.MR = univariable.MR(full.data)
+
+	# Filter example data to the 15 most significant risk factors based on univariable associations
+	data = filter.data(full.data, as.integer(15), results.univariable.MR)
+
+	# Simulate parameters and write to file
+	simulate.parameters(nsim=nsim, m=data@m, model=model, filename=filename.parameters, overwrite=FALSE, data=data, tau=tau, h=h, mu=mu, n=n, seed=seed)
+'''
+}
+
 // Default values
 params.ntasks = 1000
-params.params = [0.0] * params.ntasks
-params.n = [149] * params.ntasks
-params.publishDir = 'grand.null'
+params.n = 145
+params.model = 'grand_null'
+params.publishDir = params.model
+params.simulate_parameters_tau = 19
+params.simulate_parameters_h = 1
+params.simulate_parameters_mu = 0.1
+params.simulate_parameters_seed = 0
+
+// Print arguments
+// Default arguments can be overriden by specifying them in nextflow.config
+// Unspecified arguments with no default will throw an error here.
+println 'Arguments'
+println 'ntasks:			       ' + params.ntasks
+println 'n:					       ' + params.n
+println 'model:				       ' + params.model
+println 'publishDir:		       ' + params.publishDir
+println 'simulate_parameters_tau:  ' + params.simulate_parameters_tau
+println 'simulate_parameters_h:    ' + params.simulate_parameters_h
+println 'simulate_parameters_mu:   ' + params.simulate_parameters_mu
+println 'simulate_parameters_seed: ' + params.simulate_parameters_seed
 
 // Define the channels
 ch_taskid = Channel.of(1..params.ntasks)
-ch_params = Channel.fromList(params.params)
-ch_n = Channel.fromList(params.n)
-ch_args = ch_params.combine(ch_n)
-
-// Print arguments
-println 'Arguments'
-println 'ntasks:			' + params.ntasks
-println 'params:			' + params.params
-println 'n:					' + params.n
 
 // Go
 workflow {
+	// Simulate the parameters
+	simulate_parameters()
+	
 	// Perform the simulations
-	simulate(ch_taskid, ch_args)
+	simulate(ch_taskid, simulate_parameters.out.model_params)
 
 	// Combine performance metrics
 	combine_performance(simulate.out.sim_perf.collect())
