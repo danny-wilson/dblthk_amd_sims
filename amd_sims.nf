@@ -30,56 +30,55 @@ shell:
 	setwd("/well/bag/wilson/GitHub/dblthk_amd_sims")
 	# Load required source code: this in turn sources summary_mvMR_BF.R
 	source("biomarker-sim-functions.R")
+	# Return to working directory
+	setwd(wd)
 
 	# Read arguments
 	taskid = as.integer("!{taskid}")
+	cat("simulate() read arguments:\n")
+	cat("taskid:              ", taskid, "\n")
 	stopifnot(taskid>0)
 	infile = as.character("!{parameters_filename}")
 	filename.sim_data = "!{taskid}.sim.data.RDS"
 	filename.sim_anal = "!{taskid}.sim.anal.RDS"
 	filename.sim_perf = "!{taskid}.sim.perf.RDS"
-
-	# Implied arguments
-	nsim = as.integer("!{params.ntasks}")
-	n = as.numeric("!{params.n}")
-	mr_bma_nsim = as.integer("!{params.mr_bma_nsim}")
-
-	# Read parameters
-	stopifnot(file.exists(infile))
-	all_params = as.matrix(read.delim(infile, header=FALSE, sep="\t", quote=FALSE))
-	params = all_params[taskid,]
-	
-	# Print arguments
-	cat("simulate() read arguments:\n")
-	cat("taskid:              ", taskid, "\n")
 	cat("infile:              ", infile, "\n")
 	cat("filename.sim_data:   ", filename.sim_data, "\n")
 	cat("filename.sim_anal:   ", filename.sim_anal, "\n")
 	cat("filename.sim_perf:   ", filename.sim_perf, "\n")
+
+	# Implied arguments
+	nsim = as.integer("!{params.ntasks}")
 	cat("nsim:                ", nsim, "\n")
+	stopifnot(!is.na(nsim))
+	stopifnot(nsim>0)
+	stopifnot(nsim>=taskid)
+	n = as.numeric("!{params.n}")
 	cat("n:                   ", n, "\n")
+	stopifnot(!is.na(n))
+	stopifnot(n>0)
+	mr_bma_nsim = as.integer("!{params.mr_bma_nsim}")
 	cat("mr_bma_nsim:         ", mr_bma_nsim, "\n")
-	cat("params:              ", params, "\n")
-	cat("\n")
+	stopifnot(!is.na(mr_bma_nsim))
+	stopifnot(mr_bma_nsim>=0)
 
 	# Check arguments
 	stopifnot(!is.na(taskid))
 	stopifnot(!file.exists(infile))
-	stopifnot(!is.na(nsim))
-	stopifnot(nsim>0)
-	stopifnot(nsim>=taskid)
-	stopifnot(!is.na(n))
 	stopifnot(n>15)
-	stopifnot(!is.na(mr_bma_nsim))
-	stopifnot(mr_bma_nsim>=0)
+
+	# Read parameters
+	stopifnot(file.exists(infile))
+	all_params = as.matrix(read.delim(infile, header=FALSE, sep="\t", quote=FALSE))
 	stopifnot(nrow(all_params)==nsim)
 	stopifnot(ncol(all_params)==15)
 	stopifnot(!any(is.na(all_params)))
+	params = all_params[taskid,]
+	cat("params:              ", params, "\n\n")
 
 	# Load example AMD data
+	setwd("/well/bag/wilson/GitHub/dblthk_amd_sims")
 	full.data = load.data()
-
-	# Return to working directory
 	setwd(wd)
 
 	# Perform univariable association tests
