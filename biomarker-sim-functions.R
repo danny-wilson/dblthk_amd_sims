@@ -497,6 +497,22 @@ performance.familywise = function(elementwise) 1*(sum(elementwise)>0)
 performance.error.rate = function(num, den) sum(num)/pmax(1, sum(den))
 
 # Class for standardized performance metrics
+setClass("bmsim_test_performance",
+	representation(
+		# Frequentist test performance
+		bias = "numeric",
+		typeI = "numeric",
+		typeII = "numeric",
+		familywiseI = "numeric",
+		familywiseII = "numeric",
+		fdr = "numeric",
+		fndr = "numeric",
+		fpr = "numeric",
+		fnr = "numeric",
+	)
+)
+
+# Class for standardized performance metrics
 setClass("bmsim_performance",
 	representation(
 		analysis = "character",
@@ -510,25 +526,13 @@ setClass("bmsim_performance",
 		# Std Error performance
 		stderr.coverage = "numeric",
 		# Frequentist test performance
-		freqt.bias = "numeric",
-		freqt.typeI = "numeric",
-		freqt.typeII = "numeric",
-		freqt.familywiseI = "numeric",
-		freqt.familywiseII = "numeric",
-		freqt.fdr = "numeric",
-		freqt.fndr = "numeric",
-		freqt.fpr = "numeric",
-		freqt.fnr = "numeric",
+		freqt.marginal = "bmsim_test_performance",
+		freqt.pairwise = "bmsim_test_performance",
+		freqt.headline = "bmsim_test_performance",
 		# Bayesian test performance
-		bayes.bias = "numeric",
-		bayes.typeI = "numeric",
-		bayes.typeII = "numeric",
-		bayes.familywiseI = "numeric",
-		bayes.familywiseII = "numeric",
-		bayes.fdr = "numeric",
-		bayes.fndr = "numeric",
-		bayes.fpr = "numeric",
-		bayes.fnr = "numeric",
+		bayes.marginal = "bmsim_test_performance",
+		bayes.pairwise = "bmsim_test_performance",
+		bayes.headline = "bmsim_test_performance",
 		# Prediction performance
 		prediction.L1 = "numeric",
 		prediction.L2 = "numeric",
@@ -565,26 +569,30 @@ setMethod("performance", "bmsim_analysisResults", function(obj, parameter, newda
 	param.signif = 1*(parameter!=0)
 	
 	freqt.signif = 1*(obj@signif.neglog10padj >= thresh.neglog10padj)
-	ret@freqt.bias = performance.bias(freqt.signif, param.signif)
-	ret@freqt.typeI = performance.typeI(freqt.signif, param.signif)
-	ret@freqt.typeII = performance.typeII(freqt.signif, param.signif)
-	ret@freqt.familywiseI = performance.familywise(ret@freqt.typeI)
-	ret@freqt.familywiseII = performance.familywise(ret@freqt.typeII)
-	ret@freqt.fdr = performance.error.rate(ret@freqt.typeI, freqt.signif)
-	ret@freqt.fndr = performance.error.rate(ret@freqt.typeII, 1-freqt.signif)
-	ret@freqt.fpr = performance.error.rate(ret@freqt.typeI, 1-param.signif)
-	ret@freqt.fnr = performance.error.rate(ret@freqt.typeII, param.signif)
+	ret@freqt.marginal = new("bmsim_test_performance",
+		bias = performance.bias(freqt.signif, param.signif),
+		typeI = performance.typeI(freqt.signif, param.signif),
+		typeII = performance.typeII(freqt.signif, param.signif),
+		familywiseI = performance.familywise(ret@freqt.typeI),
+		familywiseII = performance.familywise(ret@freqt.typeII),
+		fdr = performance.error.rate(ret@freqt.typeI, freqt.signif),
+		fndr = performance.error.rate(ret@freqt.typeII, 1-freqt.signif),
+		fpr = performance.error.rate(ret@freqt.typeI, 1-param.signif),
+		fnr = performance.error.rate(ret@freqt.typeII, param.signif)
+	)
 
 	bayes.signif = 1*(obj@signif.log10po >= thresh.log10po)
-	ret@bayes.bias = performance.bias(bayes.signif, param.signif)
-	ret@bayes.typeI = performance.typeI(bayes.signif, param.signif)
-	ret@bayes.typeII = performance.typeII(bayes.signif, param.signif)
-	ret@bayes.familywiseI = performance.familywise(ret@bayes.typeI)
-	ret@bayes.familywiseII = performance.familywise(ret@bayes.typeII)
-	ret@bayes.fdr = performance.error.rate(ret@bayes.typeI, bayes.signif)
-	ret@bayes.fndr = performance.error.rate(ret@bayes.typeII, 1-bayes.signif)
-	ret@bayes.fpr = performance.error.rate(ret@bayes.typeI, 1-param.signif)
-	ret@bayes.fnr = performance.error.rate(ret@bayes.typeII, param.signif)
+	ret@bayes.marginal = new("bmsim_test_performance",
+		bias = performance.bias(bayes.signif, param.signif),
+		typeI = performance.typeI(bayes.signif, param.signif),
+		typeII = performance.typeII(bayes.signif, param.signif),
+		familywiseI = performance.familywise(ret@bayes.typeI),
+		familywiseII = performance.familywise(ret@bayes.typeII),
+		fdr = performance.error.rate(ret@bayes.typeI, bayes.signif),
+		fndr = performance.error.rate(ret@bayes.typeII, 1-bayes.signif),
+		fpr = performance.error.rate(ret@bayes.typeI, 1-param.signif),
+		fnr = performance.error.rate(ret@bayes.typeII, param.signif)
+	)
 
 	# Prediction
 	if(!is.null(newdata)) {
@@ -602,12 +610,12 @@ setMethod("performance", "bmsim_analysisResults", function(obj, parameter, newda
 	# Apply names
 	names(ret@estimate.bias) <- ret@names
 	names(ret@stderr.coverage) <- ret@names
-	names(ret@freqt.bias) <- ret@names
-	names(ret@freqt.typeI) <- ret@names
-	names(ret@freqt.typeII) <- ret@names
-	names(ret@bayes.bias) <- ret@names
-	names(ret@bayes.typeI) <- ret@names
-	names(ret@bayes.typeII) <- ret@names
+	names(ret@freqt.marginal@bias) <- ret@names
+	names(ret@freqt.marginal@typeI) <- ret@names
+	names(ret@freqt.marginal@typeII) <- ret@names
+	names(ret@bayes.marginal@bias) <- ret@names
+	names(ret@bayes.marginal@typeI) <- ret@names
+	names(ret@bayes.marginal@typeII) <- ret@names
 
 	return(ret)
 })
@@ -668,26 +676,30 @@ combine.performance = function(performance.list) {
 	ret@stderr.coverage = rowMeans(sapply(1:nsim, function(i) performance.list[[i]]@stderr.coverage))
 	
 	# Hypothesis tests
-	ret@freqt.bias = rowMeans(sapply(1:nsim, function(i) performance.list[[i]]@freqt.bias))
-	ret@freqt.typeI = rowMeans(sapply(1:nsim, function(i) performance.list[[i]]@freqt.typeI))
-	ret@freqt.typeII = rowMeans(sapply(1:nsim, function(i) performance.list[[i]]@freqt.typeII))
-	ret@freqt.familywiseI = mean(sapply(1:nsim, function(i) performance.list[[i]]@freqt.familywiseI))
-	ret@freqt.familywiseII = mean(sapply(1:nsim, function(i) performance.list[[i]]@freqt.familywiseII))
-	ret@freqt.fdr = mean(sapply(1:nsim, function(i) performance.list[[i]]@freqt.fdr))
-	ret@freqt.fndr = mean(sapply(1:nsim, function(i) performance.list[[i]]@freqt.fndr))
-	ret@freqt.fpr = mean(sapply(1:nsim, function(i) performance.list[[i]]@freqt.fpr))
-	ret@freqt.fnr = mean(sapply(1:nsim, function(i) performance.list[[i]]@freqt.fnr))
+	ret@freqt.marginal = new("bmsim_test_performance",
+		bias = rowMeans(sapply(1:nsim, function(i) performance.list[[i]]@freqt.marginal@bias)),
+		typeI = rowMeans(sapply(1:nsim, function(i) performance.list[[i]]@freqt.marginal@typeI)),
+		typeII = rowMeans(sapply(1:nsim, function(i) performance.list[[i]]@freqt.marginal@typeII)),
+		familywiseI = mean(sapply(1:nsim, function(i) performance.list[[i]]@freqt.marginal@familywiseI)),
+		familywiseII = mean(sapply(1:nsim, function(i) performance.list[[i]]@freqt.marginal@familywiseII)),
+		fdr = mean(sapply(1:nsim, function(i) performance.list[[i]]@freqt.marginal@fdr)),
+		fndr = mean(sapply(1:nsim, function(i) performance.list[[i]]@freqt.marginal@fndr)),
+		fpr = mean(sapply(1:nsim, function(i) performance.list[[i]]@freqt.marginal@fpr)),
+		fnr = mean(sapply(1:nsim, function(i) performance.list[[i]]@freqt.marginal@fnr))
+	)
 
-	ret@bayes.bias = rowMeans(sapply(1:nsim, function(i) performance.list[[i]]@bayes.bias))
-	ret@bayes.typeI = rowMeans(sapply(1:nsim, function(i) performance.list[[i]]@bayes.typeI))
-	ret@bayes.typeII = rowMeans(sapply(1:nsim, function(i) performance.list[[i]]@bayes.typeII))
-	ret@bayes.familywiseI = mean(sapply(1:nsim, function(i) performance.list[[i]]@bayes.familywiseI))
-	ret@bayes.familywiseII = mean(sapply(1:nsim, function(i) performance.list[[i]]@bayes.familywiseII))
-	ret@bayes.fdr = mean(sapply(1:nsim, function(i) performance.list[[i]]@bayes.fdr))
-	ret@bayes.fndr = mean(sapply(1:nsim, function(i) performance.list[[i]]@bayes.fndr))
-	ret@bayes.fpr = mean(sapply(1:nsim, function(i) performance.list[[i]]@bayes.fpr))
-	ret@bayes.fnr = mean(sapply(1:nsim, function(i) performance.list[[i]]@bayes.fnr))
-
+	ret@bayes.marginal = new("bmsim_test_performance",
+		bias = rowMeans(sapply(1:nsim, function(i) performance.list[[i]]@bayes.marginal@bias)),
+		typeI = rowMeans(sapply(1:nsim, function(i) performance.list[[i]]@bayes.marginal@typeI)),
+		typeII = rowMeans(sapply(1:nsim, function(i) performance.list[[i]]@bayes.marginal@typeII)),
+		familywiseI = mean(sapply(1:nsim, function(i) performance.list[[i]]@bayes.marginal@familywiseI)),
+		familywiseII = mean(sapply(1:nsim, function(i) performance.list[[i]]@bayes.marginal@familywiseII)),
+		fdr = mean(sapply(1:nsim, function(i) performance.list[[i]]@bayes.marginal@fdr)),
+		fndr = mean(sapply(1:nsim, function(i) performance.list[[i]]@bayes.marginal@fndr)),
+		fpr = mean(sapply(1:nsim, function(i) performance.list[[i]]@bayes.marginal@fpr)),
+		fnr = mean(sapply(1:nsim, function(i) performance.list[[i]]@bayes.marginal@fnr))
+	)
+	
 	# Prediction
 	ret@prediction.L1 = mean(sapply(1:nsim, function(i) performance.list[[i]]@prediction.L1))
 	ret@prediction.L2 = mean(sapply(1:nsim, function(i) performance.list[[i]]@prediction.L2))
@@ -698,12 +710,12 @@ combine.performance = function(performance.list) {
 	# Apply names
 	names(ret@estimate.bias) <- ret@names
 	names(ret@stderr.coverage) <- ret@names
-	names(ret@freqt.bias) <- ret@names
-	names(ret@freqt.typeI) <- ret@names
-	names(ret@freqt.typeII) <- ret@names
-	names(ret@bayes.bias) <- ret@names
-	names(ret@bayes.typeI) <- ret@names
-	names(ret@bayes.typeII) <- ret@names
+	names(ret@freqt.marginal@bias) <- ret@names
+	names(ret@freqt.marginal@typeI) <- ret@names
+	names(ret@freqt.marginal@typeII) <- ret@names
+	names(ret@bayes.marginal@bias) <- ret@names
+	names(ret@bayes.marginal@typeI) <- ret@names
+	names(ret@bayes.marginal@typeII) <- ret@names
 
 	return(ret)
 }
