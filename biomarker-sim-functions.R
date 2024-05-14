@@ -578,6 +578,23 @@ setClass("bmsim_performance",
 	)
 )
 
+calc.test.performance = function(test.signif, param.signif) {
+	stopifnot(length(test.signif)==length(param.signif))
+	typeI = performance.typeI(test.signif, param.signif)
+	typeII = performance.typeII(test.signif, param.signif)
+	return(new("bmsim_test_performance",
+		bias = performance.bias(test.signif, param.signif),
+		typeI = typeI,
+		typeII = typeII,
+		familywiseI = performance.familywise(typeI),
+		familywiseII = performance.familywise(typeII),
+		fdr = performance.error.rate(typeI, test.signif),
+		fndr = performance.error.rate(typeII, 1-test.signif),
+		fpr = performance.error.rate(typeI, 1-param.signif),
+		fnr = performance.error.rate(typeII, param.signif)
+	))
+}
+
 setGeneric("performance", function(obj, ...) standardGeneric("performance"))
 setMethod("performance", "bmsim_analysisResults", function(obj, parameter, newdata=NULL, thresh.neglog10padj=NA, thresh.log10po=NA) {
 	validate(obj)
@@ -606,30 +623,10 @@ setMethod("performance", "bmsim_analysisResults", function(obj, parameter, newda
 	param.signif = 1*(parameter!=0)
 	
 	freqt.signif = 1*(obj@signif.neglog10padj >= thresh.neglog10padj)
-	ret@freqt.marginal = new("bmsim_test_performance",
-		bias = performance.bias(freqt.signif, param.signif),
-		typeI = performance.typeI(freqt.signif, param.signif),
-		typeII = performance.typeII(freqt.signif, param.signif),
-		familywiseI = performance.familywise(performance.typeI(freqt.signif, param.signif)),
-		familywiseII = performance.familywise(performance.typeII(freqt.signif, param.signif)),
-		fdr = performance.error.rate(ret@freqt.typeI, freqt.signif),
-		fndr = performance.error.rate(ret@freqt.typeII, 1-freqt.signif),
-		fpr = performance.error.rate(ret@freqt.typeI, 1-param.signif),
-		fnr = performance.error.rate(ret@freqt.typeII, param.signif)
-	)
+	ret@freqt.marginal = calc.test.performance(freqt.signif, param.signif)
 
 	bayes.signif = 1*(obj@signif.log10po >= thresh.log10po)
-	ret@bayes.marginal = new("bmsim_test_performance",
-		bias = performance.bias(bayes.signif, param.signif),
-		typeI = performance.typeI(bayes.signif, param.signif),
-		typeII = performance.typeII(bayes.signif, param.signif),
-		familywiseI = performance.familywise(performance.typeI(bayes.signif, param.signif)),
-		familywiseII = performance.familywise(performance.typeII(bayes.signif, param.signif)),
-		fdr = performance.error.rate(ret@bayes.typeI, bayes.signif),
-		fndr = performance.error.rate(ret@bayes.typeII, 1-bayes.signif),
-		fpr = performance.error.rate(ret@bayes.typeI, 1-param.signif),
-		fnr = performance.error.rate(ret@bayes.typeII, param.signif)
-	)
+	ret@bayes.marginal = calc.test.performance(bayes.signif, param.signif)
 
 	# Prediction
 	if(!is.null(newdata)) {
