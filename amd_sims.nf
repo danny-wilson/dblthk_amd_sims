@@ -52,6 +52,9 @@ shell:
 	n = as.numeric("!{params.n}")
 	stopifnot(!is.na(n))
 	stopifnot(n>0)
+	mr_bma_nsim = as.integer("!{params.mr_bma_nsim}")
+	stopifnot(!is.na(mr_bma_nsim))
+	stopifnot(mr_bma_nsim>=0)
 
 	# Read parameters
 	stopifnot(file.exists(infile))
@@ -70,6 +73,7 @@ shell:
 	cat("filename.sim_perf:   ", filename.sim_perf, "\n")
 	cat("nsim:                ", nsim, "\n")
 	cat("n:                   ", n, "\n")
+	cat("mr_bma_nsim:         ", mr_bma_nsim, "\n")
 	cat("params:              ", params, "\n")
 	cat("\n")
 
@@ -97,7 +101,7 @@ shell:
 	new.data = simulate(n, params)
 	
 	# Perform the standard set of analyses
-	sim.anal = do.analyses(sim.data, nu=full.data@m, mr.bma.nsim=1000)
+	sim.anal = do.analyses(sim.data, nu=full.data@m, mr.bma.nsim=mr_bma_nsim)
 
 	# Compute performance metrics for the analyses
 	sim.perf = calc.performance(sim.anal, params, freqt.alpha=0.01, bayes.tau=19, newdata=new.data)
@@ -247,6 +251,7 @@ params.simulate_parameters_tau = 19
 params.simulate_parameters_h = 1
 params.simulate_parameters_mu = 0.1
 params.simulate_parameters_seed = 0
+params.mr_bma_nsim = 1000
 
 // Print arguments
 // Default arguments can be overriden by specifying them in nextflow.config
@@ -260,6 +265,7 @@ println 'simulate_parameters_tau:  ' + params.simulate_parameters_tau
 println 'simulate_parameters_h:    ' + params.simulate_parameters_h
 println 'simulate_parameters_mu:   ' + params.simulate_parameters_mu
 println 'simulate_parameters_seed: ' + params.simulate_parameters_seed
+println 'mr_bma_nsim: ' + params.mr_bma_nsim
 
 // Define the channels
 ch_taskid = Channel.of(1..params.ntasks)
