@@ -41,27 +41,12 @@ shell:
 
 	# Implied arguments
 	nsim = as.integer("!{params.ntasks}")
-	stopifnot(!is.na(nsim))
-	stopifnot(nsim>0)
-	stopifnot(nsim>=taskid)
 	n = as.numeric("!{params.n}")
-	stopifnot(!is.na(n))
-	stopifnot(n>0)
 	mr_bma_nsim = as.integer("!{params.mr_bma_nsim}")
-	stopifnot(!is.na(mr_bma_nsim))
-	stopifnot(mr_bma_nsim>=0)
-
-	# Check arguments
-	stopifnot(!is.na(taskid))
-	stopifnot(!file.exists(infile))
-	stopifnot(n>15)
 
 	# Read parameters
 	stopifnot(file.exists(infile))
 	all_params = as.matrix(read.delim(infile, header=FALSE, sep="\t", quote=FALSE))
-	stopifnot(nrow(all_params)==nsim)
-	stopifnot(ncol(all_params)==15)
-	stopifnot(!any(is.na(all_params)))
 	params = all_params[taskid,]
 	
 	# Print arguments
@@ -76,6 +61,20 @@ shell:
 	cat("mr_bma_nsim:         ", mr_bma_nsim, "\n")
 	cat("params:              ", params, "\n")
 	cat("\n")
+
+	# Check arguments
+	stopifnot(!is.na(taskid))
+	stopifnot(!file.exists(infile))
+	stopifnot(!is.na(nsim))
+	stopifnot(nsim>0)
+	stopifnot(nsim>=taskid)
+	stopifnot(!is.na(n))
+	stopifnot(n>15)
+	stopifnot(!is.na(mr_bma_nsim))
+	stopifnot(mr_bma_nsim>=0)
+	stopifnot(nrow(all_params)==nsim)
+	stopifnot(ncol(all_params)==15)
+	stopifnot(!any(is.na(all_params)))
 
 	# Load example AMD data
 	full.data = load.data()
