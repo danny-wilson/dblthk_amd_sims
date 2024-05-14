@@ -39,11 +39,6 @@ shell:
 	filename.sim_anal = "!{taskid}.sim.anal.RDS"
 	filename.sim_perf = "!{taskid}.sim.perf.RDS"
 
-	# Check arguments
-	stopifnot(!is.na(taskid))
-	stopifnot(!file.exists(infile))
-	stopifnot(n>15)
-
 	# Implied arguments
 	nsim = as.integer("!{params.ntasks}")
 	stopifnot(!is.na(nsim))
@@ -55,6 +50,11 @@ shell:
 	mr_bma_nsim = as.integer("!{params.mr_bma_nsim}")
 	stopifnot(!is.na(mr_bma_nsim))
 	stopifnot(mr_bma_nsim>=0)
+
+	# Check arguments
+	stopifnot(!is.na(taskid))
+	stopifnot(!file.exists(infile))
+	stopifnot(n>15)
 
 	# Read parameters
 	stopifnot(file.exists(infile))
