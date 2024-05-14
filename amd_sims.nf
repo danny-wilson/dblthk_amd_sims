@@ -65,7 +65,7 @@ shell:
 
 	# Read parameters
 	stopifnot(file.exists(infile))
-	all_params = as.matrix(read.delim(infile, header=FALSE, sep="\t", quote=FALSE))
+	all_params = as.matrix(read.delim(infile, header=FALSE, sep="\t", quote=""))
 	stopifnot(nrow(all_params)==nsim)
 	stopifnot(ncol(all_params)==15)
 	stopifnot(!any(is.na(all_params)))
