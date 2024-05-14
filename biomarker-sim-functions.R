@@ -709,12 +709,20 @@ combine.performance = function(performance.list) {
 }
 
 # Perform a standardized set of analyses of a single dataset
-do.analyses = function(data, nu=data@m, dblthk.h = c(0.25, 1, 4), dblthk.mu = c(0.05, 0.1, 0.2), mr.bma.nsim=1000, mr.bma.sigma=0.5, mr.bma.prior_prob=0.1) {
+do.analyses = function(data, params, nu=data@m, dblthk.h = c(0.25, 1, 4), dblthk.mu = c(0.05, 0.1, 0.2), mr.bma.nsim=1000, mr.bma.sigma=0.5, mr.bma.prior_prob=0.1) {
 	stopifnot(is(data, "bmsim_data"))
 	validate(data)
+	stopifnot(length(params)==data@m)
+	stopifnot(!any(is.na(params)))
 	
 	results = list()
-	# Single model results based on various types of model selection
+	# Single model results based on the 'oracle' model
+	results[["oracle"]] = add1drop1(data, params!=0, nu, analysis.name="Multivariable Mendelian randomization with no variables; leave one out/add one in significance testing")
+
+	# Single model results based on the grand null
+	results[["grand null"]] = add1drop1(data, rep(FALSE, data@m), nu, analysis.name="Multivariable Mendelian randomization with no variables; leave one out/add one in significance testing")
+
+	# Single model results based on the grand alternative
 	results[["grand alternative"]] = add1drop1(data, rep(TRUE, data@m), nu, analysis.name="Multivariable Mendelian randomization with all variables; leave one out/add one in significance testing")
 
 	# Stepwise regression
