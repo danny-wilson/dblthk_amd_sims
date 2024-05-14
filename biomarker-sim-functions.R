@@ -717,7 +717,7 @@ do.analyses = function(data, params, nu=data@m, dblthk.h = c(0.25, 1, 4), dblthk
 	
 	results = list()
 	# Single model results based on the 'oracle' model
-	results[["oracle"]] = add1drop1(data, params!=0, nu, analysis.name="Multivariable Mendelian randomization with no variables; leave one out/add one in significance testing")
+	results[["oracle"]] = add1drop1(data, params!=0, nu, analysis.name="Multivariable Mendelian randomization with oracle model; leave one out/add one in significance testing")
 
 	# Single model results based on the grand null
 	results[["grand null"]] = add1drop1(data, rep(FALSE, data@m), nu, analysis.name="Multivariable Mendelian randomization with no variables; leave one out/add one in significance testing")
