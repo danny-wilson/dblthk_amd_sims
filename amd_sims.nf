@@ -37,6 +37,7 @@ shell:
 	taskid = as.integer("!{taskid}")
 	cat("simulate() read arguments:\n")
 	cat("taskid:              ", taskid, "\n")
+	stopifnot(!is.na(taskid))
 	stopifnot(taskid>0)
 	infile = as.character("!{parameters_filename}")
 	filename.sim_data = "!{taskid}.sim.data.RDS"
@@ -56,16 +57,11 @@ shell:
 	n = as.numeric("!{params.n}")
 	cat("n:                   ", n, "\n")
 	stopifnot(!is.na(n))
-	stopifnot(n>0)
+	stopifnot(n>15)
 	mr_bma_nsim = as.integer("!{params.mr_bma_nsim}")
 	cat("mr_bma_nsim:         ", mr_bma_nsim, "\n")
 	stopifnot(!is.na(mr_bma_nsim))
 	stopifnot(mr_bma_nsim>=0)
-
-	# Check arguments
-	stopifnot(!is.na(taskid))
-	stopifnot(!file.exists(infile))
-	stopifnot(n>15)
 
 	# Read parameters
 	stopifnot(file.exists(infile))
