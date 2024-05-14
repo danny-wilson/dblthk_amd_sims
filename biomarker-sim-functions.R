@@ -578,11 +578,12 @@ setClass("bmsim_performance",
 	)
 )
 
-calc.test.performance = function(test.signif, param.signif) {
+calc.test.performance = function(test.signif, param.signif, param.names=NULL) {
 	stopifnot(length(test.signif)==length(param.signif))
+	if(!is.null(params.names)) stopifnot(length(test.signif)==length(param.names))
 	typeI = performance.typeI(test.signif, param.signif)
 	typeII = performance.typeII(test.signif, param.signif)
-	return(new("bmsim_test_performance",
+	ret = new("bmsim_test_performance",
 		bias = performance.bias(test.signif, param.signif),
 		typeI = typeI,
 		typeII = typeII,
@@ -592,7 +593,13 @@ calc.test.performance = function(test.signif, param.signif) {
 		fndr = performance.error.rate(typeII, 1-test.signif),
 		fpr = performance.error.rate(typeI, 1-param.signif),
 		fnr = performance.error.rate(typeII, param.signif)
-	))
+	)
+	if(!is.null(param.names)) {
+		names(ret@bias) <- param.names
+		names(ret@typeI) <- param.names
+		names(ret@typeII) <- param.names
+	}
+	return(ret)
 }
 
 setGeneric("performance", function(obj, ...) standardGeneric("performance"))
@@ -615,18 +622,20 @@ setMethod("performance", "bmsim_analysisResults", function(obj, parameter, newda
 	ret@estimate.bias = performance.bias(obj@estimate, parameter)
 	ret@estimate.L1 = performance.L1(obj@estimate, parameter)
 	ret@estimate.L2 = performance.L2(obj@estimate, parameter)
-	
+	names(ret@estimate.bias) <- ret@names
+
 	# Std Error
 	ret@stderr.coverage = performance.stderr.coverage(obj@estimate, obj@stderror, parameter)
-	
+	names(ret@stderr.coverage) <- ret@names
+
 	# Hypothesis tests
 	param.signif = 1*(parameter!=0)
 	
 	freqt.signif = 1*(obj@signif.neglog10padj >= thresh.neglog10padj)
-	ret@freqt.marginal = calc.test.performance(freqt.signif, param.signif)
+	ret@freqt.marginal = calc.test.performance(freqt.signif, param.signif, ret@names)
 
 	bayes.signif = 1*(obj@signif.log10po >= thresh.log10po)
-	ret@bayes.marginal = calc.test.performance(bayes.signif, param.signif)
+	ret@bayes.marginal = calc.test.performance(bayes.signif, param.signif, ret@names)
 
 	# Prediction
 	if(!is.null(newdata)) {
@@ -641,16 +650,6 @@ setMethod("performance", "bmsim_analysisResults", function(obj, parameter, newda
 	# Computation time (seconds)
 	ret@time.secs = obj@time.secs
 	
-	# Apply names
-	names(ret@estimate.bias) <- ret@names
-	names(ret@stderr.coverage) <- ret@names
-	names(ret@freqt.marginal@bias) <- ret@names
-	names(ret@freqt.marginal@typeI) <- ret@names
-	names(ret@freqt.marginal@typeII) <- ret@names
-	names(ret@bayes.marginal@bias) <- ret@names
-	names(ret@bayes.marginal@typeI) <- ret@names
-	names(ret@bayes.marginal@typeII) <- ret@names
-
 	return(ret)
 })
 
