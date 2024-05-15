@@ -21,6 +21,15 @@ setClass("bmsim_data",
 	)
 )
 
+setClass("bmsim_pvalueTests",
+	representation(
+		method = "character",
+		marginal.neglog10padj = "numeric",
+		pairwise.neglog10padj = "numeric",
+		headline.neglog10padj = "numeric"
+	)
+)
+
 # Class for standardized analysis results
 setClass("bmsim_analysisResults",
 	representation(
@@ -30,11 +39,20 @@ setClass("bmsim_analysisResults",
 		names = "character",
 		estimate = "numeric",
 		stderror = "numeric",
+		# Frequentist Bonferroni-adjusted
 		signif.neglog10padj = "numeric",
-		signif.log10po = "numeric",
 		pairwise.signif.neglog10padj = "numeric",
-		pairwise.signif.log10po = "numeric",
 		headline.signif.neglog10padj = "numeric",
+		# Frequentist BH
+		# Frequentist Multilevel Simes
+		# Frequentist HMP
+		# Frequentist Cauchy (?)
+		# Frequentist FDP
+		# Frequentist E-values
+		pvalueTests = "list",
+		# Bayesian
+		signif.log10po = "numeric",
+		pairwise.signif.log10po = "numeric",
 		headline.signif.log10po = "numeric",
 		time.secs = "numeric"
 	)
@@ -293,6 +311,134 @@ setMethod("performance", "bmsim_analysisResults", function(obj, parameter, newda
 	return(ret)
 })
 
+# Methods to calculate pvalueTests
+# False discovery rate control; Benjamini & Hochberg (1995)
+calc.BH = function(neglog10padj, nu) {
+	stopifnot(nu>=length(neglog10padj))
+	p = 1/nu * 10^(-neglog10padj)
+	new("bmsim_pvalueTests",
+		method = "FDR control; Benjamini and Hochberg 1995",
+		marginal.neglog10padj = -log10(p.adjust(p, method="BH", n=nu)),
+		pairwise.neglog10padj = double(0),
+		headline.neglog10padj = -log10(min(p.adjust(p, method="BH", n=nu)))
+	)
+}
+
+library(harmonicmeanp)
+# Harmonic mean p-value procedure; Wilson (2019); anticonservative for non-small p
+calc.HMP = function(neglog10padj, nu) {
+	stopifnot(nu>=length(neglog10padj))
+	p = 1/nu * 10^(-neglog10padj)
+	p.pair = outer(p, p, Vectorize(function(x, y) p.hmp(c(x, y), L=nu)))
+	names.pair = outer(names(p), names(p), Vectorize(function(x, y) paste(x, y, sep=" | ")))
+	p.pair = p.pair[lower.tri(p.pair)]
+	names(p.pair) <- names.pair[lower.tri(names.pair)]
+	ret = new("bmsim_pvalueTests",
+		method = "Harmonic mean p-value procedure; Wilson 2019",
+		marginal.neglog10padj = neglog10padj,
+		pairwise.neglog10padj = -log10(p.pair),
+		headline.neglog10padj = -log10(p.hmp(c(p, rep(1, nu-length(p))), L=nu))
+	)
+	names(ret@headline.neglog10padj) <- paste(names(p), collapse=" | ")
+	return(ret)
+}
+
+# Simes' test (analogous to harmonic mean p-value test)
+p.Simes = function(p, w = NULL, L = NULL, w.sum.tolerance = 1e-6, multilevel = TRUE) {
+  if(is.null(L) & multilevel) {
+	warning("L not specified: for multilevel testing set L to the total number of individual p-values")
+	L = length(p)
+  }
+  if(length(p) == 0) return(NA)
+  if(length(p) > L) stop("The number of p-values cannot exceed L")
+  if(is.null(w)) {
+	w = rep(1/L,length(p))
+  } else {
+	if(any(w<0)) stop("No weights can be negative")
+	if(length(w)!=length(p)) stop("When specified, length of w must equal length of p")
+  }
+  w.sum = sum(w)
+  if(w.sum>1+w.sum.tolerance) {
+	stop("Weights cannot exceed 1")
+  }
+  pstar = p/w
+  return(c(p.Simes = min(sort(pstar)/(1:length(p)))))
+}
+# Multilevel Simes test; Wilson (2020)
+calc.Simes = function(neglog10padj, nu) {
+	stopifnot(nu>=length(neglog10padj))
+	p = 1/nu * 10^(-neglog10padj)
+	p.pair = outer(p, p, Vectorize(function(x, y) p.Simes(c(x, y), L=nu)))
+	names.pair = outer(names(p), names(p), Vectorize(function(x, y) paste(x, y, sep=" | ")))
+	p.pair = p.pair[lower.tri(p.pair)]
+	names(p.pair) <- names.pair[lower.tri(names.pair)]
+	ret = new("bmsim_pvalueTests",
+		method = "Multilevel Simes test; Wilson 2020",
+		marginal.neglog10padj = neglog10padj,
+		pairwise.neglog10padj = -log10(p.pair),
+		headline.neglog10padj = -log10(p.Simes(c(p, rep(1, nu-length(p))), L=nu))
+	)
+	names(ret@headline.neglog10padj) <- paste(names(p), collapse=" | ")
+	return(ret)
+}
+
+# Cauchy combination test
+p.Cauchy = function(p, w=rep(1/length(p), length(p))) {
+  t0 = sum(w*tan((0.5-p)*pi))
+  0.5 - atan(t0)/pi
+}
+# Cauchy combination test; Liu and Xie (2020)
+# Implemented as an expectation over excluded values: assuming they are less significant than
+# the included values and follow a truncated uniform(0,1) distribution.
+# Otherwise by forcing them to be 1, the combined p-value would be forced to be 0 or 1.
+calc.Cauchy = function(neglog10padj, nu, nsim=10000) {
+	stopifnot(nu>=length(neglog10padj))
+	p = 1/nu * 10^(-neglog10padj)
+	p.max = pmin(1, max(p))
+	headline = mean(replicate(nsim, {p.Cauchy(c(p, runif(nu-length(p), p.max, 1)))}))
+	ret = new("bmsim_pvalueTests",
+		method = "Cauchy combination test; Liu and Xie 2020",
+		marginal.neglog10padj = neglog10padj,
+		pairwise.neglog10padj = double(0),
+		headline.neglog10padj = -log10(headline)
+	)
+	names(ret@headline.neglog10padj) <- paste(names(p), collapse=" | ")
+	return(ret)
+}
+
+# sum of logarithms function
+logsum = function(x,na.rm=FALSE) {
+	mx = max(x,na.rm=na.rm)
+	log(sum(exp(x-mx),na.rm=na.rm))+mx
+}
+# E-value test
+p.evalue = function(p, L=length(p), kappa=0.01) {
+	logBF = log(kappa)+(kappa-1)*log(p)
+	evalue = exp(logsum(logBF))/L
+	# Under the null, the following is uniform or more conservative by Markov's inequality
+	# assuming the expectation of the BF is 1 under the null
+	p = min(1, 1/evalue)
+	return(p)
+}
+# An evalue procedure; based on Vovk and Wang (2021)
+# Multilevel property based on specifying nu to be sum of all tests to be combined
+calc.evalue = function(neglog10padj, nu, kappa=0.01) {
+	stopifnot(nu>=length(neglog10padj))
+	p = 1/nu * 10^(-neglog10padj)
+	p.pair = outer(p, p, Vectorize(function(x, y) p.evalue(c(x, y), L=nu, kappa=kappa)))
+	names.pair = outer(names(p), names(p), Vectorize(function(x, y) paste(x, y, sep=" | ")))
+	p.pair = p.pair[lower.tri(p.pair)]
+	names(p.pair) <- names.pair[lower.tri(names.pair)]
+	ret = new("bmsim_pvalueTests",
+		method = "An E-value procedure; based on Vovk and Wang 2021",
+		marginal.neglog10padj = neglog10padj,
+		pairwise.neglog10padj = -log10(p.pair),
+		headline.neglog10padj = -log10(p.evalue(c(p, rep(1, nu-length(p))), L=nu, kappa=kappa))
+	)
+	names(ret@headline.neglog10padj) <- paste(names(p), collapse=" | ")
+	return(ret)
+}
+
 # Load test data 'amd_example' based on demo_AMD
 load.data = function() {
 	load("amd_example")
@@ -494,6 +640,14 @@ add1drop1 = function(data, binary.inclusion.vector, nu=data@m, print.ssq=FALSE, 
 	names(ret@stderror) <- ret@names
 	names(ret@signif.neglog10padj) <- ret@names
 	names(ret@signif.log10po) <- ret@names
+	ret@pvalueTests = list(
+		"BH" = calc.BH(ret@signif.neglog10padj, nu),
+		"HMP" = calc.HMP(ret@signif.neglog10padj, nu),
+		"Simes" = calc.Simes(ret@signif.neglog10padj, nu),
+		"Cauchy" = calc.Cauchy(ret@signif.neglog10padj, nu),
+		#"FDP" = calc.FDP(ret@signif.neglog10padj, nu),
+		"Evalue" = calc.evalue(ret@signif.neglog10padj, nu, kappa=0.01)
+	)
 	validate(ret)
 	return(ret)
 }
@@ -589,6 +743,14 @@ doublethink.x = function(data, h=1, mu=.1/(1-.1), nu=data@m) {
 				 pairwise.signif.log10po = log10(PO.pairwise),
 				 headline.signif.neglog10padj = -log10(p.adj.headline),
 				 headline.signif.log10po = log10(PO.headline),
+				 pvalueTests = list(
+					 "BH" = calc.BH(-log10(p.adj.marginal), nu),
+					 "HMP" = calc.HMP(-log10(p.adj.marginal), nu),
+					 "Simes" = calc.Simes(-log10(p.adj.marginal), nu),
+					 "Cauchy" = calc.Cauchy(-log10(p.adj.marginal), nu),
+					 #"FDP" = calc.FDP(-log10(p.adj.marginal), nu),
+					 "Evalue" = calc.evalue(-log10(p.adj.marginal), nu, kappa=0.01)
+				 ),
 				 time.secs = as.double(difftime(end_time, start_time, units="secs"))
 			)
 	}
