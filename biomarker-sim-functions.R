@@ -32,7 +32,93 @@ setClass("bmsim_analysisResults",
 		stderror = "numeric",
 		signif.neglog10padj = "numeric",
 		signif.log10po = "numeric",
+		pairwise.signif.neglog10padj = "numeric",
+		pairwise.signif.log10po = "numeric",
+		headline.signif.neglog10padj = "numeric",
+		headline.signif.log10po = "numeric",
 		time.secs = "numeric"
+	)
+)
+
+# Class for standardized performance metrics
+setClass("bmsim_test_performance",
+	representation(
+		# Frequentist test performance
+		bias = "numeric",
+		typeI = "numeric",
+		typeII = "numeric",
+		familywiseI = "numeric",
+		familywiseII = "numeric",
+		fdr = "numeric",
+		fndr = "numeric",
+		fpr = "numeric",
+		fnr = "numeric"
+	),
+	prototype(
+		# Frequentist test performance
+		bias = double(0),
+		typeI = double(0),
+		typeII = double(0),
+		familywiseI = double(0),
+		familywiseII = double(0),
+		fdr = double(0),
+		fndr = double(0),
+		fpr = double(0),
+		fnr = double(0)
+	)
+)
+
+# Class for standardized performance metrics
+setClass("bmsim_performance",
+	representation(
+		analysis = "character",
+		data = "character",
+		m = "integer",
+		names = "character",
+		# Estimator performance
+		estimate.bias = "numeric",
+		estimate.L1 = "numeric",
+		estimate.L2 = "numeric",
+		# Std Error performance
+		stderr.coverage = "numeric",
+		# Frequentist test performance
+		freqt.marginal = "bmsim_test_performance",
+		freqt.pairwise = "bmsim_test_performance",
+		freqt.headline = "bmsim_test_performance",
+		# Bayesian test performance
+		bayes.marginal = "bmsim_test_performance",
+		bayes.pairwise = "bmsim_test_performance",
+		bayes.headline = "bmsim_test_performance",
+		# Prediction performance
+		prediction.L1 = "numeric",
+		prediction.L2 = "numeric",
+		# Computation time (seconds)
+		time.secs = "numeric"
+	),
+	prototype(
+		analysis = character(0),
+		data = character(0),
+		m = integer(0),
+		names = character(0),
+		# Estimator performance
+		estimate.bias = double(0),
+		estimate.L1 = double(0),
+		estimate.L2 = double(0),
+		# Std Error performance
+		stderr.coverage = double(0),
+		# Frequentist test performance
+		freqt.marginal = new("bmsim_test_performance"),
+		freqt.pairwise = new("bmsim_test_performance"),
+		freqt.headline = new("bmsim_test_performance"),
+		# Bayesian test performance
+		bayes.marginal = new("bmsim_test_performance"),
+		bayes.pairwise = new("bmsim_test_performance"),
+		bayes.headline = new("bmsim_test_performance"),
+		# Prediction performance
+		prediction.L1 = double(0),
+		prediction.L2 = double(0),
+		# Computation time (seconds)
+		time.secs = double(0)
 	)
 )
 
@@ -71,6 +157,140 @@ setMethod("predict", "bmsim_analysisResults", function(object, newdata) {
 	validate(newdata)
 	stopifnot(object@m==newdata@m)
 	as.vector(newdata@x %*% matrix(object@estimate, ncol=1))
+})
+
+#   Define functions to compute performance metrics:
+#     Point estimates:
+#		Bias
+#       Mean absolute error (L1)
+#       Root mean square error loss (L2)
+#     95% interval estimates:
+#       Coverage
+#     Hypothesis tests:
+#       Type I error loss
+#       Familywise type I error loss
+#       Type II error loss
+#       Familywise type II error loss
+#       False discovery rate
+#       False non-discovery rate
+#		False positive rate
+#		False negative rate
+#     Prediction:
+#       Mean absolute error (L1)
+#       RMSE (L2)
+#     Compute:
+#       Compute time
+
+performance.bias = function(estimate, parameter) estimate-parameter
+performance.L1 = function(estimate, parameter) mean(abs(estimate-parameter))
+performance.L2 = function(estimate, parameter) sqrt(mean((estimate-parameter)^2))
+performance.stderr.coverage = function(estimate, stderr, parameter, alpha=0.05) {
+	1*(qnorm(alpha/2, estimate, stderr) <= parameter & parameter <= qnorm(1-alpha/2, estimate, stderr))
+}
+performance.typeI = function(test.signif, param.signif) (1-param.signif)*test.signif
+performance.typeII = function(test.signif, param.signif) param.signif*(1-test.signif)
+performance.familywise = function(elementwise) 1*(sum(elementwise)>0)
+performance.error.rate = function(num, den) sum(num)/pmax(1, sum(den))
+
+calc.test.performance = function(test.signif, param.signif, param.names=NULL) {
+	stopifnot(length(test.signif)==length(param.signif))
+	if(!is.null(param.names)) stopifnot(length(test.signif)==length(param.names))
+	typeI = performance.typeI(test.signif, param.signif)
+	typeII = performance.typeII(test.signif, param.signif)
+	ret = new("bmsim_test_performance",
+		bias = performance.bias(test.signif, param.signif),
+		typeI = typeI,
+		typeII = typeII,
+		familywiseI = performance.familywise(typeI),
+		familywiseII = performance.familywise(typeII),
+		fdr = performance.error.rate(typeI, test.signif),
+		fndr = performance.error.rate(typeII, 1-test.signif),
+		fpr = performance.error.rate(typeI, 1-param.signif),
+		fnr = performance.error.rate(typeII, param.signif)
+	)
+	if(!is.null(param.names)) {
+		names(ret@bias) <- param.names
+		names(ret@typeI) <- param.names
+		names(ret@typeII) <- param.names
+	}
+	return(ret)
+}
+
+setGeneric("performance", function(obj, ...) standardGeneric("performance"))
+setMethod("performance", "bmsim_analysisResults", function(obj, parameter, newdata=NULL, thresh.neglog10padj=NA, thresh.log10po=NA) {
+	validate(obj)
+	stopifnot(length(parameter)==obj@m)
+	if(!is.null(newdata)) {
+		stopifnot(newdata@m==obj@m)
+		validate(newdata)
+	}
+	
+	ret = new("bmsim_performance",
+		analysis = obj@analysis,
+		data = obj@data,
+		m = obj@m,
+		names = obj@names
+	)
+	
+	# Estimate
+	ret@estimate.bias = performance.bias(obj@estimate, parameter)
+	ret@estimate.L1 = performance.L1(obj@estimate, parameter)
+	ret@estimate.L2 = performance.L2(obj@estimate, parameter)
+	names(ret@estimate.bias) <- ret@names
+
+	# Std Error
+	ret@stderr.coverage = performance.stderr.coverage(obj@estimate, obj@stderror, parameter)
+	names(ret@stderr.coverage) <- ret@names
+
+	# Hypothesis tests: marginal
+	param.signif = 1*(parameter!=0)
+	
+	freqt.signif = 1*(obj@signif.neglog10padj >= thresh.neglog10padj)
+	ret@freqt.marginal = calc.test.performance(freqt.signif, param.signif, ret@names)
+
+	bayes.signif = 1*(obj@signif.log10po >= thresh.log10po)
+	ret@bayes.marginal = calc.test.performance(bayes.signif, param.signif, ret@names)
+
+	# Hypothesis tests: pairwise
+	if(length(obj@pairwise.signif.neglog10padj)>0) {
+		param.signif = outer(param.signif, param.signif, FUN="|")
+		param.signif = 1*(param.signif[lower.tri(param.signif)])
+		
+		pairwise.freqt.signif = 1*(obj@pairwise.signif.neglog10padj >= thresh.neglog10padj)
+		ret@freqt.pairwise = calc.test.performance(pairwise.freqt.signif, param.signif, names(obj@pairwise.signif.neglog10padj))
+
+		pairwise.bayes.signif = 1*(obj@pairwise.signif.log10po >= thresh.log10po)
+		ret@bayes.pairwise = calc.test.performance(pairwise.bayes.signif, param.signif, names(obj@pairwise.signif.log10po))
+	}
+
+	# Hypothesis tests: marginal
+	if(length(obj@headline.signif.neglog10padj)>0) {
+		param.signif = 1*any(parameter!=0)
+		
+		headline.freqt.signif = 1*(obj@headline.signif.neglog10padj >= thresh.neglog10padj)
+		ret@freqt.headline = calc.test.performance(headline.freqt.signif, param.signif, names(obj@headline.signif.neglog10padj))
+
+		headline.bayes.signif = 1*(obj@headline.signif.log10po >= thresh.log10po)
+		ret@bayes.headline = calc.test.performance(headline.bayes.signif, param.signif, names(obj@headline.signif.log10po))
+	}
+
+	# Hypothesis tests: Benjamini-Hochberg
+	###
+	
+	# Prediction
+	if(!is.null(newdata)) {
+		prediction = predict(obj, newdata)
+		ret@prediction.L1 = performance.L1(prediction, newdata@y)
+		ret@prediction.L2 = performance.L2(prediction, newdata@y)
+	} else {
+		ret@prediction.L1 = as.double(NA)
+		ret@prediction.L2 = as.double(NA)
+	}
+	
+	# Computation time (seconds)
+	ret@time.secs = obj@time.secs
+	
+	return(ret)
 })
 
 # Load test data 'amd_example' based on demo_AMD
@@ -337,12 +557,24 @@ doublethink.x = function(data, h=1, mu=.1/(1-.1), nu=data@m) {
 	}
 	colnames(PP) <- hyper.names
 	end_time = Sys.time()
+	# Model inclusion vector for pairwise tests
+	s.pairwise = matrix(as.double(NA), nrow=nrow(s), ncol=0)
+	for(v1 in 1:(data@m-1)) {
+		for(v2 in (v1+1):data@m) {
+			s.pairwise = cbind(s.pairwise, s[,v1] | s[,v2])
+			colnames(s.pairwise)[ncol(s.pairwise)] <- paste(colnames(s)[c(v1, v2)], collapse=" | ")
+		}
+	}
 	# Compute the return objects: model-averaged results
 	doublethink.bma = list()
 	for(j in 1:nanal) {
-		PO = colSums(PP[,j]*s)/colSums(PP[,j]*(1-s))
-		p.adj = pchisq(2*log(PO/nu/mu[j]/sqrt(xi[j])), 1, low=FALSE)
-		p.adj[p.adj>0.02] = 1
+		PO.marginal = colSums(PP[,j]*s)/colSums(PP[,j]*(1-s))
+		PO.pairwise = colSums(PP[,j]*s.pairwise)/colSums(PP[,j]*(1-s.pairwise))
+		PO.headline = sum(PP[-1,j])/PP[1,j]
+		names(PO.headline) <- paste(colnames(s), collapse = " | ")
+		p.adj.marginal = pchisq(2*log(PO.marginal/nu/mu[j]/sqrt(xi[j])), 1, low=FALSE); p.adj.marginal[p.adj.marginal>0.02] = 1
+		p.adj.pairwise = pchisq(2*log(PO.pairwise/nu/mu[j]/sqrt(xi[j])), 1, low=FALSE); p.adj.pairwise[p.adj.pairwise>0.02] = 1
+		p.adj.headline = pchisq(2*log(PO.headline/nu/mu[j]/sqrt(xi[j])), 1, low=FALSE); p.adj.headline[p.adj.headline>0.02] = 1
 		doublethink.bma[[j]] =
 			new("bmsim_analysisResults",
 				analysis = "Bayesian model averaged multivariable Mendelian randomization with Doublethink",
@@ -351,8 +583,12 @@ doublethink.x = function(data, h=1, mu=.1/(1-.1), nu=data@m) {
 				 names = data@x.names,
 				 estimate = colSums(PP[,j]*estimate),
 				 stderror = sqrt(colSums(PP[,j]*(stderror^2 + estimate^2)) - colSums(PP[,j]*estimate)^2),
-				 signif.neglog10padj = -log10(p.adj),
-				 signif.log10po = log10(PO),
+				 signif.neglog10padj = -log10(p.adj.marginal),
+				 signif.log10po = log10(PO.marginal),
+				 pairwise.signif.neglog10padj = -log10(p.adj.pairwise),
+				 pairwise.signif.log10po = log10(PO.pairwise),
+				 headline.signif.neglog10padj = -log10(p.adj.headline),
+				 headline.signif.log10po = log10(PO.headline),
 				 time.secs = as.double(difftime(end_time, start_time, units="secs"))
 			)
 	}
@@ -463,196 +699,6 @@ do.glmnet = function(data, grid.len=11, nu=data@m) {
 	return(list('lasso'=lasso.ret, 'elnet'=elnet.ret, 'ridge'=ridge.ret))
 }
 
-#   Define functions to compute performance metrics:
-#     Point estimates:
-#		Bias
-#       Mean absolute error (L1)
-#       Root mean square error loss (L2)
-#     95% interval estimates:
-#       Coverage
-#     Hypothesis tests:
-#       Type I error loss
-#       Familywise type I error loss
-#       Type II error loss
-#       Familywise type II error loss
-#       False discovery rate
-#       False non-discovery rate
-#		False positive rate
-#		False negative rate
-#     Prediction:
-#       Mean absolute error (L1)
-#       RMSE (L2)
-#     Compute:
-#       Compute time
-
-performance.bias = function(estimate, parameter) estimate-parameter
-performance.L1 = function(estimate, parameter) mean(abs(estimate-parameter))
-performance.L2 = function(estimate, parameter) sqrt(mean((estimate-parameter)^2))
-performance.stderr.coverage = function(estimate, stderr, parameter, alpha=0.05) {
-	1*(qnorm(alpha/2, estimate, stderr) <= parameter & parameter <= qnorm(1-alpha/2, estimate, stderr))
-}
-performance.typeI = function(test.signif, param.signif) (1-param.signif)*test.signif
-performance.typeII = function(test.signif, param.signif) param.signif*(1-test.signif)
-performance.familywise = function(elementwise) 1*(sum(elementwise)>0)
-performance.error.rate = function(num, den) sum(num)/pmax(1, sum(den))
-
-# Class for standardized performance metrics
-setClass("bmsim_test_performance",
-	representation(
-		# Frequentist test performance
-		bias = "numeric",
-		typeI = "numeric",
-		typeII = "numeric",
-		familywiseI = "numeric",
-		familywiseII = "numeric",
-		fdr = "numeric",
-		fndr = "numeric",
-		fpr = "numeric",
-		fnr = "numeric"
-	),
-	prototype(
-		# Frequentist test performance
-		bias = double(0),
-		typeI = double(0),
-		typeII = double(0),
-		familywiseI = double(0),
-		familywiseII = double(0),
-		fdr = double(0),
-		fndr = double(0),
-		fpr = double(0),
-		fnr = double(0)
-	)
-)
-
-# Class for standardized performance metrics
-setClass("bmsim_performance",
-	representation(
-		analysis = "character",
-		data = "character",
-		m = "integer",
-		names = "character",
-		# Estimator performance
-		estimate.bias = "numeric",
-		estimate.L1 = "numeric",
-		estimate.L2 = "numeric",
-		# Std Error performance
-		stderr.coverage = "numeric",
-		# Frequentist test performance
-		freqt.marginal = "bmsim_test_performance",
-		freqt.pairwise = "bmsim_test_performance",
-		freqt.headline = "bmsim_test_performance",
-		# Bayesian test performance
-		bayes.marginal = "bmsim_test_performance",
-		bayes.pairwise = "bmsim_test_performance",
-		bayes.headline = "bmsim_test_performance",
-		# Prediction performance
-		prediction.L1 = "numeric",
-		prediction.L2 = "numeric",
-		# Computation time (seconds)
-		time.secs = "numeric"
-	),
-	prototype(
-		analysis = character(0),
-		data = character(0),
-		m = integer(0),
-		names = character(0),
-		# Estimator performance
-		estimate.bias = double(0),
-		estimate.L1 = double(0),
-		estimate.L2 = double(0),
-		# Std Error performance
-		stderr.coverage = double(0),
-		# Frequentist test performance
-		freqt.marginal = new("bmsim_test_performance"),
-		freqt.pairwise = new("bmsim_test_performance"),
-		freqt.headline = new("bmsim_test_performance"),
-		# Bayesian test performance
-		bayes.marginal = new("bmsim_test_performance"),
-		bayes.pairwise = new("bmsim_test_performance"),
-		bayes.headline = new("bmsim_test_performance"),
-		# Prediction performance
-		prediction.L1 = double(0),
-		prediction.L2 = double(0),
-		# Computation time (seconds)
-		time.secs = double(0)
-	)
-)
-
-calc.test.performance = function(test.signif, param.signif, param.names=NULL) {
-	stopifnot(length(test.signif)==length(param.signif))
-	if(!is.null(param.names)) stopifnot(length(test.signif)==length(param.names))
-	typeI = performance.typeI(test.signif, param.signif)
-	typeII = performance.typeII(test.signif, param.signif)
-	ret = new("bmsim_test_performance",
-		bias = performance.bias(test.signif, param.signif),
-		typeI = typeI,
-		typeII = typeII,
-		familywiseI = performance.familywise(typeI),
-		familywiseII = performance.familywise(typeII),
-		fdr = performance.error.rate(typeI, test.signif),
-		fndr = performance.error.rate(typeII, 1-test.signif),
-		fpr = performance.error.rate(typeI, 1-param.signif),
-		fnr = performance.error.rate(typeII, param.signif)
-	)
-	if(!is.null(param.names)) {
-		names(ret@bias) <- param.names
-		names(ret@typeI) <- param.names
-		names(ret@typeII) <- param.names
-	}
-	return(ret)
-}
-
-setGeneric("performance", function(obj, ...) standardGeneric("performance"))
-setMethod("performance", "bmsim_analysisResults", function(obj, parameter, newdata=NULL, thresh.neglog10padj=NA, thresh.log10po=NA) {
-	validate(obj)
-	stopifnot(length(parameter)==obj@m)
-	if(!is.null(newdata)) {
-		stopifnot(newdata@m==obj@m)
-		validate(newdata)
-	}
-	
-	ret = new("bmsim_performance",
-		analysis = obj@analysis,
-		data = obj@data,
-		m = obj@m,
-		names = obj@names
-	)
-	
-	# Estimate
-	ret@estimate.bias = performance.bias(obj@estimate, parameter)
-	ret@estimate.L1 = performance.L1(obj@estimate, parameter)
-	ret@estimate.L2 = performance.L2(obj@estimate, parameter)
-	names(ret@estimate.bias) <- ret@names
-
-	# Std Error
-	ret@stderr.coverage = performance.stderr.coverage(obj@estimate, obj@stderror, parameter)
-	names(ret@stderr.coverage) <- ret@names
-
-	# Hypothesis tests
-	param.signif = 1*(parameter!=0)
-	
-	freqt.signif = 1*(obj@signif.neglog10padj >= thresh.neglog10padj)
-	ret@freqt.marginal = calc.test.performance(freqt.signif, param.signif, ret@names)
-
-	bayes.signif = 1*(obj@signif.log10po >= thresh.log10po)
-	ret@bayes.marginal = calc.test.performance(bayes.signif, param.signif, ret@names)
-
-	# Prediction
-	if(!is.null(newdata)) {
-		prediction = predict(obj, newdata)
-		ret@prediction.L1 = performance.L1(prediction, newdata@y)
-		ret@prediction.L2 = performance.L2(prediction, newdata@y)
-	} else {
-		ret@prediction.L1 = as.double(NA)
-		ret@prediction.L2 = as.double(NA)
-	}
-	
-	# Computation time (seconds)
-	ret@time.secs = obj@time.secs
-	
-	return(ret)
-})
-
 # Generate a function to perform simulations with sample size up to max.n with fixed independent variables
 # Model is for Mendelian randomization with the specified causal effects
 gen.simulate = function(data, max.n=1000, seed=NA) {
@@ -684,6 +730,30 @@ gen.simulate = function(data, max.n=1000, seed=NA) {
 	return(simulate)
 }
 
+# Combine performance for a specific test
+rowMeans.robust = function(x) {
+	if(is.null(dim(x))) x = matrix(x, nrow=1)
+	rowMeans(x)
+}
+combine.test.performance = function(performance.list, test.name) {
+	nsim = length(performance.list)
+	ret = new("bmsim_test_performance",
+		bias = rowMeans.robust(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@bias)),
+		typeI = rowMeans.robust(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@typeI)),
+		typeII = rowMeans.robust(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@typeII)),
+		familywiseI = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@familywiseI)),
+		familywiseII = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@familywiseII)),
+		fdr = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@fdr)),
+		fndr = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@fndr)),
+		fpr = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@fpr)),
+		fnr = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@fnr))
+	)
+	names(ret@bias) <- names(slot(performance.list[[1]], test.name)@bias)
+	names(ret@typeI) <- names(slot(performance.list[[1]], test.name)@typeI)
+	names(ret@typeII) <- names(slot(performance.list[[1]], test.name)@typeII)
+	return(ret)
+}
+
 # Combine a list of performance objects applied to comparable analyses
 combine.performance = function(performance.list) {
 	nsim = length(performance.list)
@@ -709,19 +779,14 @@ combine.performance = function(performance.list) {
 	ret@stderr.coverage = rowMeans(sapply(1:nsim, function(i) performance.list[[i]]@stderr.coverage))
 	
 	# Hypothesis tests
-	ret@freqt.marginal = new("bmsim_test_performance",
-		bias = rowMeans(sapply(1:nsim, function(i) performance.list[[i]]@freqt.marginal@bias)),
-		typeI = rowMeans(sapply(1:nsim, function(i) performance.list[[i]]@freqt.marginal@typeI)),
-		typeII = rowMeans(sapply(1:nsim, function(i) performance.list[[i]]@freqt.marginal@typeII)),
-		familywiseI = mean(sapply(1:nsim, function(i) performance.list[[i]]@freqt.marginal@familywiseI)),
-		familywiseII = mean(sapply(1:nsim, function(i) performance.list[[i]]@freqt.marginal@familywiseII)),
-		fdr = mean(sapply(1:nsim, function(i) performance.list[[i]]@freqt.marginal@fdr)),
-		fndr = mean(sapply(1:nsim, function(i) performance.list[[i]]@freqt.marginal@fndr)),
-		fpr = mean(sapply(1:nsim, function(i) performance.list[[i]]@freqt.marginal@fpr)),
-		fnr = mean(sapply(1:nsim, function(i) performance.list[[i]]@freqt.marginal@fnr))
-	)
+	ret@freqt.marginal = combine.test.performance(performance.list, "freqt.marginal")
+	ret@bayes.marginal = combine.test.performance(performance.list, "bayes.marginal")
+	if(length(performance.list[[1]]@freqt.pairwise@bias)>0) ret@freqt.pairwise = combine.test.performance(performance.list, "freqt.pairwise")
+	if(length(performance.list[[1]]@bayes.pairwise@bias)>0) ret@bayes.pairwise = combine.test.performance(performance.list, "bayes.pairwise")
+	if(length(performance.list[[1]]@freqt.headline@bias)>0) ret@freqt.headline = combine.test.performance(performance.list, "freqt.headline")
+	if(length(performance.list[[1]]@bayes.headline@bias)>0) ret@bayes.headline = combine.test.performance(performance.list, "bayes.headline")
 
-	ret@bayes.marginal = new("bmsim_test_performance",
+	if(FALSE) ret@bayes.marginal = new("bmsim_test_performance",
 		bias = rowMeans(sapply(1:nsim, function(i) performance.list[[i]]@bayes.marginal@bias)),
 		typeI = rowMeans(sapply(1:nsim, function(i) performance.list[[i]]@bayes.marginal@typeI)),
 		typeII = rowMeans(sapply(1:nsim, function(i) performance.list[[i]]@bayes.marginal@typeII)),
