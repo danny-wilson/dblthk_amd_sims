@@ -1141,8 +1141,11 @@ do.analyses = function(data, params, nu=data@m, dblthk.h = c(0.25, 1, 4), dblthk
 	results[["elastic net model selection"]] = add1drop1(data, results.glmnet$elnet@estimate!=0, nu, analysis.name="Multivariable Mendelian randomization with elastic net; leave one out/add one in significance testing")
 
 	# Perform Bayesian model-averaged Mendelian randomization using Doublethink
-	results.doublethink = doublethink.x(data, h=dblthk.h, mu=dblthk.mu, nu=nu)
-	doublethink.names = outer(dblthk.h, dblthk.mu, function(h,mu) paste0("mu = ", mu, "; h = ", h))
+	vec.dblthk.h = rep(dblthk.h, each=length(dblthk.mu))
+	vec.dblthk.mu = rep(dblthk.mu, length(dblthk.h))
+	results.doublethink = doublethink.x(data, h=vec.dblthk.h, mu=vec.dblthk.mu, nu=nu)
+	#doublethink.names = outer(dblthk.h, dblthk.mu, function(h,mu) paste0("mu = ", mu, "; h = ", h))
+	doublethink.names = paste0("mu = ", vec.dblthk.mu, "; h = ", vec.dblthk.h)
 	for(doublethink.name in doublethink.names) {
 		# Doublethink BMA
 		results[[paste0("doublethink bma ", doublethink.name)]] = results.doublethink$doublethink.bma[[doublethink.name]]
