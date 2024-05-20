@@ -95,7 +95,7 @@ shell:
 	new.data = simulate(n, params)
 	
 	# Perform the standard set of analyses
-	sim.anal = do.analyses(sim.data, params, nu=full.data@m, mr.bma.nsim=mr_bma_nsim)
+	sim.anal = do.analyses(sim.data, params, nu=sim.data@m, mr.bma.nsim=mr_bma_nsim)
 
 	# Compute performance metrics for the analyses
 	sim.perf = calc.performance(sim.anal, params, freqt.alpha=0.01, bayes.tau=19, newdata=new.data)
