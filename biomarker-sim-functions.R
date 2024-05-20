@@ -353,8 +353,9 @@ calc.BH = function(p.unadj, nu) {
 }
 
 # Harmonic mean p-value procedure; Wilson (2019); anticonservative for non-small p
-calc.HMP = function(p.unadj, nu) {
+calc.HMP = function(p.unadj, nu, min.p.unadj=1e-308) {
 	stopifnot(nu>=length(p.unadj))
+	p.unadj = pmax(min.p.unadj, p.unadj)
 	p.adj = sapply(p.unadj, Vectorize(function(p) p.hmp(c(p, rep(1, nu-1)), L=nu)))
 	names(p.adj) <- names(p.unadj)
 	p.pair = outer(p.unadj, p.unadj, Vectorize(function(x, y) p.hmp(c(x, y, rep(1, nu-2)), L=nu)))
