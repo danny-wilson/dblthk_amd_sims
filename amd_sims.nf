@@ -62,6 +62,14 @@ shell:
 	cat("mr_bma_nsim:         ", mr_bma_nsim, "\n")
 	stopifnot(!is.na(mr_bma_nsim))
 	stopifnot(mr_bma_nsim>=0)
+	alpha = as.integer("!{params.alpha}")
+	stopifnot(!is.na(alpha))
+	stopifnot(alpha>0)
+	cat("alpha:               ", alpha, "\n")
+	tau = as.integer("!{params.tau}")
+	stopifnot(!is.na(tau))
+	stopifnot(tau>0)
+	cat("tau:                 ", tau, "\n")
 
 	# Read parameters
 	stopifnot(file.exists(infile))
@@ -98,7 +106,7 @@ shell:
 	sim.anal = do.analyses(sim.data, params, nu=sim.data@m, mr.bma.nsim=mr_bma_nsim)
 
 	# Compute performance metrics for the analyses
-	sim.perf = calc.performance(sim.anal, params, freqt.alpha=0.01, bayes.tau=19, newdata=new.data)
+	sim.perf = calc.performance(sim.anal, params, freqt.alpha=alpha, bayes.tau=tau, newdata=new.data)
 
 	# Save files
 	saveRDS(sim.data, file=filename.sim_data)
@@ -246,6 +254,8 @@ params.simulate_parameters_h = 1
 params.simulate_parameters_mu = 0.1
 params.simulate_parameters_seed = 0
 params.mr_bma_nsim = 1000
+params.alpha = 0.01
+params.tau = 19
 
 // Print arguments
 // Default arguments can be overriden by specifying them in nextflow.config
