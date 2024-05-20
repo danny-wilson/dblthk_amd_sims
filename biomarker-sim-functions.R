@@ -795,13 +795,15 @@ doublethink.x = function(data, h=1, mu=.1/(1-.1), nu=data@m, e.value.kappa=0.1) 
 	degfree = degfree-degfree[1]
 	# Posterior odds and posterior probability
 	logc = log(mu[1] * sqrt(xi[1]))
-	PO = exp(degfree * logc + (1-xi[1]) * loglik)
-	PP = matrix(PO/sum(PO), ncol=1)
+	logPO = degfree * logc + (1-xi[1]) * loglik
+	PO.prop = exp(logPO - max(logPO))
+	PP = matrix(PO.prop/sum(PO.prop), ncol=1)
 	if(nanal>1) {
 		for(j in 2:nanal) {
 			logc = log(mu[j] * sqrt(xi[j]))
-			PO = exp(degfree * logc + (1-xi[j]) * loglik)
-			PP = cbind(PP, PO/sum(PO))
+			logPO = degfree * logc + (1-xi[j]) * loglik
+			PO.prop = exp(logPO - max(logPO))
+			PP = cbind(PP, PO.prop/sum(PO.prop))
 		}
 	}
 	colnames(PP) <- hyper.names
