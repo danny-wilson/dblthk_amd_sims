@@ -251,7 +251,7 @@ shell:
 params.ntasks = 1000
 params.n = 145
 params.model = 'grand_null'
-params.publishDir = params.model
+params.publishDir = '.'
 params.simulate_parameters_tau = 19
 params.simulate_parameters_h = 1
 params.simulate_parameters_mu = 0.1
