@@ -259,7 +259,7 @@ params.simulate_parameters_seed = 0
 params.mr_bma_nsim = 1000
 params.alpha = 0.01
 params.tau = 19
-params.simulate_independence = FALSE
+params.simulate_independence = false
 
 // Print arguments
 // Default arguments can be overriden by specifying them in nextflow.config
