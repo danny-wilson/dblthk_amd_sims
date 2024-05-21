@@ -36,40 +36,43 @@ shell:
 	# Read arguments
 	taskid = as.integer("!{taskid}")
 	cat("simulate() read arguments:\n")
-	cat("taskid:              ", taskid, "\n")
+	cat("taskid:                ", taskid, "\n")
 	stopifnot(!is.na(taskid))
 	stopifnot(taskid>0)
 	infile = as.character("!{parameters_filename}")
 	filename.sim_data = "!{taskid}.sim.data.RDS"
 	filename.sim_anal = "!{taskid}.sim.anal.RDS"
 	filename.sim_perf = "!{taskid}.sim.perf.RDS"
-	cat("infile:              ", infile, "\n")
-	cat("filename.sim_data:   ", filename.sim_data, "\n")
-	cat("filename.sim_anal:   ", filename.sim_anal, "\n")
-	cat("filename.sim_perf:   ", filename.sim_perf, "\n")
+	cat("infile:                ", infile, "\n")
+	cat("filename.sim_data:     ", filename.sim_data, "\n")
+	cat("filename.sim_anal:     ", filename.sim_anal, "\n")
+	cat("filename.sim_perf:     ", filename.sim_perf, "\n")
 
 	# Implied arguments
 	nsim = as.integer("!{params.ntasks}")
-	cat("nsim:                ", nsim, "\n")
+	cat("nsim:                  ", nsim, "\n")
 	stopifnot(!is.na(nsim))
 	stopifnot(nsim>0)
 	stopifnot(nsim>=taskid)
 	n = as.numeric("!{params.n}")
-	cat("n:                   ", n, "\n")
+	cat("n:                     ", n, "\n")
 	stopifnot(!is.na(n))
 	stopifnot(n>15)
 	mr_bma_nsim = as.integer("!{params.mr_bma_nsim}")
-	cat("mr_bma_nsim:         ", mr_bma_nsim, "\n")
+	cat("mr_bma_nsim:           ", mr_bma_nsim, "\n")
 	stopifnot(!is.na(mr_bma_nsim))
 	stopifnot(mr_bma_nsim>=0)
 	alpha = as.double("!{params.alpha}")
 	stopifnot(!is.na(alpha))
 	stopifnot(alpha>0)
-	cat("alpha:               ", alpha, "\n")
+	cat("alpha:                 ", alpha, "\n")
 	tau = as.double("!{params.tau}")
 	stopifnot(!is.na(tau))
 	stopifnot(tau>0)
-	cat("tau:                 ", tau, "\n")
+	cat("tau:                   ", tau, "\n")
+	simulate_independence = as.logical(toupper("!{params.simulate_independence}"))
+	stopifnot(!is.na(simulate_independence))
+	cat("simulate_independence: ", simulate_independence, "\n")
 
 	# Read parameters
 	stopifnot(file.exists(infile))
@@ -94,7 +97,7 @@ shell:
 	# Set seed to fix the independent variables (x)
 	set.seed(0)
 	# Simulate the independent variables based on the example AMBdata
-	simulate = gen.simulate(data, n)
+	simulate = gen.simulate(data, n, seed=NA, independence=simulate_independence)
 	
 	# Set seed again to unfix the dependent variables (y)
 	set.seed(taskid)
@@ -256,6 +259,7 @@ params.simulate_parameters_seed = 0
 params.mr_bma_nsim = 1000
 params.alpha = 0.01
 params.tau = 19
+params.simulate_independence = FALSE
 
 // Print arguments
 // Default arguments can be overriden by specifying them in nextflow.config
@@ -269,7 +273,10 @@ println 'simulate_parameters_tau:  ' + params.simulate_parameters_tau
 println 'simulate_parameters_h:    ' + params.simulate_parameters_h
 println 'simulate_parameters_mu:   ' + params.simulate_parameters_mu
 println 'simulate_parameters_seed: ' + params.simulate_parameters_seed
-println 'mr_bma_nsim: ' + params.mr_bma_nsim
+println 'mr_bma_nsim:              ' + params.mr_bma_nsim
+println 'alpha:                    ' + params.alpha
+println 'tau:                      ' + params.tau
+println 'simulate_independence:    ' + params.simulate_independence
 
 // Define the channels
 ch_taskid = Channel.of(1..params.ntasks)

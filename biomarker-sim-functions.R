@@ -963,11 +963,12 @@ do.glmnet = function(data, grid.len=11, nu=data@m) {
 
 # Generate a function to perform simulations with sample size up to max.n with fixed independent variables
 # Model is for Mendelian randomization with the specified causal effects
-gen.simulate = function(data, max.n=1000, seed=NA) {
+gen.simulate = function(data, max.n=1000, seed=NA, independence=FALSE) {
 	stopifnot(is(data, "bmsim_data"))
 	validate(data)
 	x.mu = colMeans(data@x)
 	x.sigma = cov(data@x)
+	if(independence) x.sigma = diag(diag(x.sigma))
 	# Simulate the independent variables just once: do not wish to study randomness in the
 	# data generating process of x, but rather condition on x
 	if(!is.na(seed)) set.seed(seed)
