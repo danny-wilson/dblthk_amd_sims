@@ -663,7 +663,7 @@ mr.bma.x = function(data, sigma=0.5, prior_prob=0.1, nsim=10, nu=data@m) {
 	}
 	
 	# Bayesian model averaged result
-	pp2log10po = function(pp) log10(pp/(1-pp))
+	pp2log10po = function(pp, eps=1e-308) log10((eps + pp)/((eps + 1-pp)))
 	ret = new("bmsim_analysisResults",
 		analysis = "Bayesian model averaged multivariable Mendelian randomization with MR-BMA",
 		data = data@id,
