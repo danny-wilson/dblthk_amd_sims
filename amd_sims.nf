@@ -124,6 +124,7 @@ shell:
 process combine_performance {
 beforeScript "module add R/4.2.1-foss-2022a"
 publishDir "${params.publishDir}", mode: "copy"
+memory "${params.combine_performance_mem} GB"
 input:
 	path(infiles)
 output:
@@ -264,6 +265,7 @@ params.alpha = 0.01
 params.tau = 9
 params.simulate_independence = false
 params.repoDir = '/well/bag/wilson/GitHub/dblthk_amd_sims'
+params.combine_performance_mem = max(15, 0.01 * params.ntasks)
 
 // Print arguments
 // Default arguments can be overriden by specifying them in nextflow.config
@@ -282,6 +284,7 @@ println 'alpha:                    ' + params.alpha
 println 'tau:                      ' + params.tau
 println 'simulate_independence:    ' + params.simulate_independence
 println 'repoDir:                  ' + params.repoDir
+println 'combine_performance_mem:  ' + params.repoDir
 
 // Define the channels
 ch_taskid = Channel.of(1..params.ntasks)
