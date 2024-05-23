@@ -1178,10 +1178,10 @@ combine.pvalueTest.performance = function(performance.list, test.name, pvalueTes
 			fndr = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)[[pvalueTest.name]]@fndr)),
 			fpr = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)[[pvalueTest.name]]@fpr)),
 			fnr = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)[[pvalueTest.name]]@fnr)),
-			tp = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@tp)),
-			fp = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@fp)),
-			tn = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@tn)),
-			fn = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@fn))
+			tp = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)[[pvalueTest.name]]@tp)),
+			fp = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)[[pvalueTest.name]]@fp)),
+			tn = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)[[pvalueTest.name]]@tn)),
+			fn = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)[[pvalueTest.name]]@fn))
 		)
 		names(ret@bias) <- names(slot(performance.list[[1]], test.name)[[pvalueTest.name]]@bias)
 		names(ret@typeI) <- names(slot(performance.list[[1]], test.name)[[pvalueTest.name]]@typeI)
