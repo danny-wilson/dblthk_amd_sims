@@ -265,7 +265,7 @@ params.alpha = 0.01
 params.tau = 9
 params.simulate_independence = false
 params.repoDir = '/well/bag/wilson/GitHub/dblthk_amd_sims'
-params.combine_performance_mem = max(15, 0.01 * params.ntasks)
+params.combine_performance_mem = Math.max(15.0, 0.01 * params.ntasks)
 
 // Print arguments
 // Default arguments can be overriden by specifying them in nextflow.config
