@@ -27,7 +27,8 @@ shell:
 
 	# Get working directory
 	wd = getwd()
-	setwd("/well/bag/wilson/GitHub/dblthk_amd_sims")
+	cat("repoDir:                !{params.repoDir}\n")
+	setwd("!{params.repoDir}")
 	# Load required source code: this in turn sources summary_mvMR_BF.R
 	source("biomarker-sim-functions.R")
 	# Return to working directory
@@ -84,7 +85,7 @@ shell:
 	cat("params:              ", params, "\n\n")
 
 	# Load example AMD data
-	setwd("/well/bag/wilson/GitHub/dblthk_amd_sims")
+	setwd("!{params.repoDir}")
 	full.data = load.data()
 	setwd(wd)
 
@@ -133,7 +134,8 @@ shell:
 	
 	# Get working directory
 	wd = getwd()
-	setwd("/well/bag/wilson/GitHub/dblthk_amd_sims")
+	cat("repoDir:               !{params.repoDir}\n")
+	setwd("!{params.repoDir}")
 	# Load required source code: this in turn sources summary_mvMR_BF.R
 	source("biomarker-sim-functions.R")
 	# Return to working directory
@@ -193,7 +195,8 @@ shell:
 
 	# Get working directory
 	wd = getwd()
-	setwd("/well/bag/wilson/GitHub/dblthk_amd_sims")
+	cat("repoDir:              !{params.repoDir}\n")
+	setwd("!{params.repoDir}")
 	# Load required source code: this in turn sources summary_mvMR_BF.R
 	source("biomarker-sim-functions.R")
 	
@@ -260,6 +263,7 @@ params.mr_bma_nsim = 1000
 params.alpha = 0.01
 params.tau = 9
 params.simulate_independence = false
+params.repoDir = '/well/bag/wilson/GitHub/dblthk_amd_sims'
 
 // Print arguments
 // Default arguments can be overriden by specifying them in nextflow.config
@@ -277,6 +281,7 @@ println 'mr_bma_nsim:              ' + params.mr_bma_nsim
 println 'alpha:                    ' + params.alpha
 println 'tau:                      ' + params.tau
 println 'simulate_independence:    ' + params.simulate_independence
+println 'repoDir:                  ' + params.repoDir
 
 // Define the channels
 ch_taskid = Channel.of(1..params.ntasks)
