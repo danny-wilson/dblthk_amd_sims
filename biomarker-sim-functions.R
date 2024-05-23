@@ -67,12 +67,17 @@ setClass("bmsim_test_performance",
 		bias = "numeric",
 		typeI = "numeric",
 		typeII = "numeric",
+		call = "numeric",
 		familywiseI = "numeric",
 		familywiseII = "numeric",
 		fdr = "numeric",
 		fndr = "numeric",
 		fpr = "numeric",
-		fnr = "numeric"
+		fnr = "numeric",
+		tp = "numeric",
+		fp = "numeric",
+		tn = "numeric",
+		fn = "numeric"
 	),
 	prototype(
 		# Frequentist test performance
@@ -229,17 +234,23 @@ calc.test.performance = function(test.signif, param.signif, param.names=NULL) {
 		bias = performance.bias(test.signif, param.signif),
 		typeI = typeI,
 		typeII = typeII,
+		call = test.signif,
 		familywiseI = performance.familywise(typeI),
 		familywiseII = performance.familywise(typeII),
 		fdr = performance.error.rate(typeI, test.signif),
 		fndr = performance.error.rate(typeII, 1-test.signif),
 		fpr = performance.error.rate(typeI, 1-param.signif),
-		fnr = performance.error.rate(typeII, param.signif)
+		fnr = performance.error.rate(typeII, param.signif),
+		tp = sum( (1-typeI)*test.signif),
+		fp = sum(    typeI *test.signif),
+		tn = sum((1-typeII)*(1-test.signif)),
+		fn = sum(   typeII *(1-test.signif))
 	)
 	if(!is.null(param.names)) {
 		names(ret@bias) <- param.names
 		names(ret@typeI) <- param.names
 		names(ret@typeII) <- param.names
+		names(ret@call) <- param.names
 	}
 	return(ret)
 }
@@ -834,6 +845,7 @@ doublethink.x = function(data, h=1, mu=.1/(1-.1), nu=data@m, e.value.kappa=0.1) 
 	# Compute the return objects: model-averaged results
 	doublethink.bma = list()
 	doublethink.bma.preciser = list()
+	doublethink.bma.yet.preciser = list()
 	for(j in 1:nanal) {
 		PO.marginal = colSums(PP[,j]*s)/colSums(PP[,j]*(1-s))
 		PO.pairwise = colSums(PP[,j]*s.pairwise)/colSums(PP[,j]*(1-s.pairwise))
@@ -918,7 +930,63 @@ doublethink.x = function(data, h=1, mu=.1/(1-.1), nu=data@m, e.value.kappa=0.1) 
 		doublethink.modelselection[[j]] = add1drop1(data, s[gd,], nu, analysis.name="Bayesian model selection multivariable Mendelian randomization with Doublethink; leave one out/add one in significance testing")
 	}
 	names(doublethink.modelselection) <- hyper.names
-	
+	# Compute the return objects: BMA yet preciser (relative to the theoretical results)
+	# Posterior odds and posterior probability, substituting (1-xi) with 1
+	for(j in 1:nanal) {
+		logc = log(mu[j] * sqrt(xi[j]))
+		logPO = degfree * logc + loglik
+		PO.prop = exp(logPO - max(logPO))
+		if(j==1) {
+			PP = matrix(PO.prop/sum(PO.prop), ncol=1)
+		} else {
+			PP = cbind(PP, PO.prop/sum(PO.prop))
+		}
+	}
+	colnames(PP) <- hyper.names
+	for(j in 1:nanal) {
+		PO.marginal = colSums(PP[,j]*s)/colSums(PP[,j]*(1-s))
+		PO.pairwise = colSums(PP[,j]*s.pairwise)/colSums(PP[,j]*(1-s.pairwise))
+		PO.headline = sum(PP[-1,j])/PP[1,j]
+		names(PO.headline) <- paste(colnames(s), collapse = " | ")
+		# Closed testing procedure p-values under Theorem 2
+		# More precise version of the denominators for when n is not huge (e.g. 25% multiplicative difference for n=145, mu=0.2, h=4)
+		denom = (1 + mu[j]*sqrt(xi[j]))^nu - 1
+		p.adj.marginal = pchisq(2*log(PO.marginal/denom), 1, low=FALSE); p.adj.marginal[p.adj.marginal>0.02] = 1
+		p.adj.pairwise = pchisq(2*log(PO.pairwise/denom), 1, low=FALSE); p.adj.pairwise[p.adj.pairwise>0.02] = 1
+		p.adj.headline = pchisq(2*log(PO.headline/denom), 1, low=FALSE); p.adj.headline[p.adj.headline>0.02] = 1
+		# Unadjusted p-values under Theorem 1
+		# No adjustment needed in the case that |V|=1
+		p.unadj.marginal = pchisq(2*log(PO.marginal/mu[j]/sqrt(xi[j])), 1, low=FALSE); p.unadj.marginal[p.unadj.marginal>0.02] = 1
+		names(p.unadj.marginal) <- data@x.names
+		doublethink.bma.yet.preciser[[j]] =
+			new("bmsim_analysisResults",
+				analysis = "Bayesian model averaged multivariable Mendelian randomization with Doublethink (preciser denominators and exponents)",
+				 data = data@id,
+				 m = data@m,
+				 names = data@x.names,
+				 estimate = colSums(PP[,j]*estimate),
+				 stderror = sqrt(colSums(PP[,j]*(stderror^2 + estimate^2)) - colSums(PP[,j]*estimate)^2),
+				 signif.neglog10padj = -log10(p.adj.marginal),
+				 signif.log10po = log10(PO.marginal),
+				 pairwise.signif.neglog10padj = -log10(p.adj.pairwise),
+				 pairwise.signif.log10po = log10(PO.pairwise),
+				 headline.signif.neglog10padj = -log10(p.adj.headline),
+				 headline.signif.log10po = log10(PO.headline),
+				 pvalueTests = list(
+					"Bonf" = calc.Bonferroni(p.unadj.marginal, nu),
+					"BH" = calc.BH(p.unadj.marginal, nu),
+					"HMP" = calc.HMP(p.unadj.marginal, nu),
+					"Simes" = calc.Simes(p.unadj.marginal, nu),
+					"Hommel" = calc.Hommel(p.unadj.marginal, nu),
+					"Cauchy" = calc.Cauchy(p.unadj.marginal, nu),
+					"Evalue" = calc.evalue(p.unadj.marginal, nu, kappa=e.value.kappa),
+					"Evalue.BF2p" = calc.evalue.BF2p(log10(PO.marginal) - log10(mu[j]), log10(PO.pairwise) - log10(2*mu[j]), log10(PO.headline) - log10(nu*mu[j]), nu)
+				 ),
+				 time.secs = as.double(difftime(end_time, start_time, units="secs"))
+			)
+	}
+	names(doublethink.bma.yet.preciser) <- hyper.names
+
 	return(list(
 		doublethink.internal = list(
 			mu = mu,
@@ -931,6 +999,7 @@ doublethink.x = function(data, h=1, mu=.1/(1-.1), nu=data@m, e.value.kappa=0.1) 
 		),
 		doublethink.bma = doublethink.bma,
 		doublethink.bma.preciser = doublethink.bma.preciser,
+		doublethink.bma.yet.preciser = doublethink.bma.yet.preciser,
 		doublethink.modelselection = doublethink.modelselection
    ))
 }
@@ -1063,16 +1132,22 @@ combine.test.performance = function(performance.list, test.name) {
 			bias = rowMeans.robust(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@bias)),
 			typeI = rowMeans.robust(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@typeI)),
 			typeII = rowMeans.robust(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@typeII)),
+			call = rowMeans.robust(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@call)),
 			familywiseI = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@familywiseI)),
 			familywiseII = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@familywiseII)),
 			fdr = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@fdr)),
 			fndr = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@fndr)),
 			fpr = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@fpr)),
-			fnr = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@fnr))
+			fnr = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@fnr)),
+			tp = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@tp)),
+			fp = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@fp)),
+			tn = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@tn)),
+			fn = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@fn))
 		)
 		names(ret@bias) <- names(slot(performance.list[[1]], test.name)@bias)
 		names(ret@typeI) <- names(slot(performance.list[[1]], test.name)@typeI)
 		names(ret@typeII) <- names(slot(performance.list[[1]], test.name)@typeII)
+		names(ret@call) <- names(slot(performance.list[[1]], test.name)@call)
 	}
 	return(ret)
 }
@@ -1085,16 +1160,22 @@ combine.pvalueTest.performance = function(performance.list, test.name, pvalueTes
 			bias = rowMeans.robust(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)[[pvalueTest.name]]@bias)),
 			typeI = rowMeans.robust(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)[[pvalueTest.name]]@typeI)),
 			typeII = rowMeans.robust(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)[[pvalueTest.name]]@typeII)),
+			call = rowMeans.robust(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)[[pvalueTest.name]]@call)),
 			familywiseI = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)[[pvalueTest.name]]@familywiseI)),
 			familywiseII = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)[[pvalueTest.name]]@familywiseII)),
 			fdr = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)[[pvalueTest.name]]@fdr)),
 			fndr = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)[[pvalueTest.name]]@fndr)),
 			fpr = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)[[pvalueTest.name]]@fpr)),
-			fnr = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)[[pvalueTest.name]]@fnr))
+			fnr = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)[[pvalueTest.name]]@fnr)),
+			tp = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@tp)),
+			fp = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@fp)),
+			tn = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@tn)),
+			fn = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@fn))
 		)
 		names(ret@bias) <- names(slot(performance.list[[1]], test.name)[[pvalueTest.name]]@bias)
 		names(ret@typeI) <- names(slot(performance.list[[1]], test.name)[[pvalueTest.name]]@typeI)
 		names(ret@typeII) <- names(slot(performance.list[[1]], test.name)[[pvalueTest.name]]@typeII)
+		names(ret@call) <- names(slot(performance.list[[1]], test.name)[[pvalueTest.name]]@call)
 	}
 	return(ret)
 }
@@ -1212,6 +1293,8 @@ do.analyses = function(data, params, nu=data@m, dblthk.h = c(0.25, 1, 4), dblthk
 		results[[paste0("doublethink bma ", doublethink.name)]] = results.doublethink$doublethink.bma[[doublethink.name]]
 		# Doublethink BMA: preciser denominators
 		results[[paste0("doublethink bma preciser ", doublethink.name)]] = results.doublethink$doublethink.bma.preciser[[doublethink.name]]
+		# Doublethink BMA: yet preciser denominators
+		results[[paste0("doublethink bma yet preciser ", doublethink.name)]] = results.doublethink$doublethink.bma.yet.preciser[[doublethink.name]]
 		# Doublethink MAP-based model selection
 		results[[paste0("doublethink model selection ", doublethink.name)]] = results.doublethink$doublethink.modelselection[[doublethink.name]]
 	}
