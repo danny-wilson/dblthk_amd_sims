@@ -252,13 +252,13 @@ params.ntasks = 1000
 params.n = 145
 params.model = 'grand_null'
 params.publishDir = '.'
-params.simulate_parameters_tau = 19
+params.simulate_parameters_tau = 9
 params.simulate_parameters_h = 1
 params.simulate_parameters_mu = 0.1
 params.simulate_parameters_seed = 0
 params.mr_bma_nsim = 1000
 params.alpha = 0.01
-params.tau = 19
+params.tau = 9
 params.simulate_independence = false
 
 // Print arguments
