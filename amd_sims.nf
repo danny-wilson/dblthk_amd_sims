@@ -284,7 +284,7 @@ println 'alpha:                    ' + params.alpha
 println 'tau:                      ' + params.tau
 println 'simulate_independence:    ' + params.simulate_independence
 println 'repoDir:                  ' + params.repoDir
-println 'combine_performance_mem:  ' + params.repoDir
+println 'combine_performance_mem:  ' + params.combine_performance_mem
 
 // Define the channels
 ch_taskid = Channel.of(1..params.ntasks)
