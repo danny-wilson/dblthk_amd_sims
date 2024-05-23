@@ -231,7 +231,7 @@ performance.typeI = function(test.signif, param.signif) (1-param.signif)*test.si
 performance.typeII = function(test.signif, param.signif) param.signif*(1-test.signif)
 performance.familywise = function(elementwise) 1*(sum(elementwise)>0)
 performance.error.rate = function(num, den) sum(num)/pmax(1, sum(den))
-performance.pfdr = function(num, den) ifelse(sum(den==0), NA, sum(num)/sum(den))
+performance.pfdr = function(num, den) as.double(ifelse(sum(den==0), NA, sum(num)/sum(den)))
 
 calc.test.performance = function(test.signif, param.signif, param.names=NULL) {
 	stopifnot(length(test.signif)==length(param.signif))
