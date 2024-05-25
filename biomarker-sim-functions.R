@@ -851,15 +851,27 @@ doublethink.x = function(data, h=1, mu=.1/(1-.1), nu=data@m, e.value.kappa=0.1) 
 			colnames(s.pairwise)[ncol(s.pairwise)] <- paste(colnames(s)[c(v1, v2)], collapse=" | ")
 		}
 	}
+	# Model inclusion vector for one-degree of freedom pairwise tests
+	s.pairwise.xor = matrix(as.logical(NA), nrow=nrow(s), ncol=0)
+	for(v1 in 1:(data@m-1)) {
+		for(v2 in (v1+1):data@m) {
+			s.pairwise.xor = cbind(s.pairwise.xor, xor(s[,v1], s[,v2]))
+			colnames(s.pairwise.xor)[ncol(s.pairwise.xor)] <- paste(colnames(s)[c(v1, v2)], collapse=" ^ ")
+		}
+	}
 	# Compute the return objects: model-averaged results
 	doublethink.bma = list()
 	doublethink.bma.preciser = list()
-	doublethink.bma.yet.preciser = list()
+	doublethink.bma.1df.preciser = list()
 	for(j in 1:nanal) {
 		PO.marginal = colSums(PP[,j]*s)/colSums(PP[,j]*(1-s))
 		PO.pairwise = colSums(PP[,j]*s.pairwise)/colSums(PP[,j]*(1-s.pairwise))
 		PO.headline = sum(PP[-1,j])/PP[1,j]
 		names(PO.headline) <- paste(colnames(s), collapse = " | ")
+		# One degree of freedom tests
+		PO.pairwise.1df = colSums(PP[,j]*s.pairwise.xor)/colSums(PP[,j]*(1-s.pairwise)) # Note xor in numerator; or in the denominator
+		PO.headline.1df = sum(PP[,j]*(degfree==1))/PP[1,j]
+		names(PO.headline.1df) <- paste(colnames(s), collapse = " ^ ")
 		# Closed testing procedure p-values under Theorem 2
 		p.adj.marginal = pchisq(2*log(PO.marginal/nu/mu[j]/sqrt(xi[j])), 1, low=FALSE); p.adj.marginal[p.adj.marginal>0.02] = 1
 		p.adj.pairwise = pchisq(2*log(PO.pairwise/nu/mu[j]/sqrt(xi[j])), 1, low=FALSE); p.adj.pairwise[p.adj.pairwise>0.02] = 1
@@ -899,6 +911,8 @@ doublethink.x = function(data, h=1, mu=.1/(1-.1), nu=data@m, e.value.kappa=0.1) 
 		p.adj.marginal = pchisq(2*log(PO.marginal/denom), 1, low=FALSE); p.adj.marginal[p.adj.marginal>0.02] = 1
 		p.adj.pairwise = pchisq(2*log(PO.pairwise/denom), 1, low=FALSE); p.adj.pairwise[p.adj.pairwise>0.02] = 1
 		p.adj.headline = pchisq(2*log(PO.headline/denom), 1, low=FALSE); p.adj.headline[p.adj.headline>0.02] = 1
+		p.adj.pairwise.1df = pchisq(2*log(PO.pairwise.1df/denom), 1, low=FALSE); p.adj.pairwise.1df[p.adj.pairwise.1df>0.02] = 1
+		p.adj.headline.1df = pchisq(2*log(PO.headline.1df/denom), 1, low=FALSE); p.adj.headline.1df[p.adj.headline.1df>0.02] = 1
 		# Unadjusted p-values under Theorem 1
 		# No adjustment needed in the case that |V|=1
 		p.unadj.marginal = pchisq(2*log(PO.marginal/mu[j]/sqrt(xi[j])), 1, low=FALSE); p.unadj.marginal[p.unadj.marginal>0.02] = 1
@@ -929,9 +943,36 @@ doublethink.x = function(data, h=1, mu=.1/(1-.1), nu=data@m, e.value.kappa=0.1) 
 				 ),
 				 time.secs = as.double(difftime(end_time, start_time, units="secs"))
 			)
+			doublethink.bma.1df.preciser[[j]] =
+				new("bmsim_analysisResults",
+					analysis = "Bayesian model averaged multivariable Mendelian randomization with Doublethink (1df tests preciser denominators)",
+					 data = data@id,
+					 m = data@m,
+					 names = data@x.names,
+					 estimate = colSums(PP[,j]*estimate),
+					 stderror = sqrt(colSums(PP[,j]*(stderror^2 + estimate^2)) - colSums(PP[,j]*estimate)^2),
+					 signif.neglog10padj = -log10(p.adj.marginal),
+					 signif.log10po = log10(PO.marginal),
+					 pairwise.signif.neglog10padj = -log10(p.adj.pairwise.1df),
+					 pairwise.signif.log10po = log10(PO.pairwise.1df),
+					 headline.signif.neglog10padj = -log10(p.adj.headline.1df),
+					 headline.signif.log10po = log10(PO.headline.1df),
+					 pvalueTests = list(
+						"Bonf" = calc.Bonferroni(p.unadj.marginal, nu),
+						"BH" = calc.BH(p.unadj.marginal, nu),
+						"HMP" = calc.HMP(p.unadj.marginal, nu),
+						"Simes" = calc.Simes(p.unadj.marginal, nu),
+						"Hommel" = calc.Hommel(p.unadj.marginal, nu),
+						"Cauchy" = calc.Cauchy(p.unadj.marginal, nu),
+						"Evalue" = calc.evalue(p.unadj.marginal, nu, kappa=e.value.kappa),
+						"Evalue.BF2p" = calc.evalue.BF2p(log10(PO.marginal) - log10(mu[j]), log10(PO.pairwise.1df) - log10(2*mu[j]), log10(PO.headline.1df) - log10(nu*mu[j]), nu)
+					 ),
+					 time.secs = as.double(difftime(end_time, start_time, units="secs"))
+				)
 	}
 	names(doublethink.bma) <- hyper.names
 	names(doublethink.bma.preciser) <- hyper.names
+	names(doublethink.bma.1df.preciser) <- hyper.names
 	# Compute the return objects: model selection results
 	doublethink.modelselection = list()
 	for(j in 1:nanal) {
@@ -939,62 +980,6 @@ doublethink.x = function(data, h=1, mu=.1/(1-.1), nu=data@m, e.value.kappa=0.1) 
 		doublethink.modelselection[[j]] = add1drop1(data, s[gd,], nu, analysis.name="Bayesian model selection multivariable Mendelian randomization with Doublethink; leave one out/add one in significance testing")
 	}
 	names(doublethink.modelselection) <- hyper.names
-	# Compute the return objects: BMA yet preciser (relative to the theoretical results)
-	# Posterior odds and posterior probability, substituting (1-xi) with 1
-	for(j in 1:nanal) {
-		logc = log(mu[j] * sqrt(xi[j]))
-		logPO = degfree * logc + loglik
-		PO.prop = exp(logPO - max(logPO))
-		if(j==1) {
-			PP = matrix(PO.prop/sum(PO.prop), ncol=1)
-		} else {
-			PP = cbind(PP, PO.prop/sum(PO.prop))
-		}
-	}
-	colnames(PP) <- hyper.names
-	for(j in 1:nanal) {
-		PO.marginal = colSums(PP[,j]*s)/colSums(PP[,j]*(1-s))
-		PO.pairwise = colSums(PP[,j]*s.pairwise)/colSums(PP[,j]*(1-s.pairwise))
-		PO.headline = sum(PP[-1,j])/PP[1,j]
-		names(PO.headline) <- paste(colnames(s), collapse = " | ")
-		# Closed testing procedure p-values under Theorem 2
-		# More precise version of the denominators for when n is not huge (e.g. 25% multiplicative difference for n=145, mu=0.2, h=4)
-		denom = (1 + mu[j]*sqrt(xi[j]))^nu - 1
-		p.adj.marginal = pchisq(2*log(PO.marginal/denom), 1, low=FALSE); p.adj.marginal[p.adj.marginal>0.02] = 1
-		p.adj.pairwise = pchisq(2*log(PO.pairwise/denom), 1, low=FALSE); p.adj.pairwise[p.adj.pairwise>0.02] = 1
-		p.adj.headline = pchisq(2*log(PO.headline/denom), 1, low=FALSE); p.adj.headline[p.adj.headline>0.02] = 1
-		# Unadjusted p-values under Theorem 1
-		# No adjustment needed in the case that |V|=1
-		p.unadj.marginal = pchisq(2*log(PO.marginal/mu[j]/sqrt(xi[j])), 1, low=FALSE); p.unadj.marginal[p.unadj.marginal>0.02] = 1
-		names(p.unadj.marginal) <- data@x.names
-		doublethink.bma.yet.preciser[[j]] =
-			new("bmsim_analysisResults",
-				analysis = "Bayesian model averaged multivariable Mendelian randomization with Doublethink (preciser denominators and exponents)",
-				 data = data@id,
-				 m = data@m,
-				 names = data@x.names,
-				 estimate = colSums(PP[,j]*estimate),
-				 stderror = sqrt(colSums(PP[,j]*(stderror^2 + estimate^2)) - colSums(PP[,j]*estimate)^2),
-				 signif.neglog10padj = -log10(p.adj.marginal),
-				 signif.log10po = log10(PO.marginal),
-				 pairwise.signif.neglog10padj = -log10(p.adj.pairwise),
-				 pairwise.signif.log10po = log10(PO.pairwise),
-				 headline.signif.neglog10padj = -log10(p.adj.headline),
-				 headline.signif.log10po = log10(PO.headline),
-				 pvalueTests = list(
-					"Bonf" = calc.Bonferroni(p.unadj.marginal, nu),
-					"BH" = calc.BH(p.unadj.marginal, nu),
-					"HMP" = calc.HMP(p.unadj.marginal, nu),
-					"Simes" = calc.Simes(p.unadj.marginal, nu),
-					"Hommel" = calc.Hommel(p.unadj.marginal, nu),
-					"Cauchy" = calc.Cauchy(p.unadj.marginal, nu),
-					"Evalue" = calc.evalue(p.unadj.marginal, nu, kappa=e.value.kappa),
-					"Evalue.BF2p" = calc.evalue.BF2p(log10(PO.marginal) - log10(mu[j]), log10(PO.pairwise) - log10(2*mu[j]), log10(PO.headline) - log10(nu*mu[j]), nu)
-				 ),
-				 time.secs = as.double(difftime(end_time, start_time, units="secs"))
-			)
-	}
-	names(doublethink.bma.yet.preciser) <- hyper.names
 
 	return(list(
 		doublethink.internal = list(
@@ -1008,7 +993,7 @@ doublethink.x = function(data, h=1, mu=.1/(1-.1), nu=data@m, e.value.kappa=0.1) 
 		),
 		doublethink.bma = doublethink.bma,
 		doublethink.bma.preciser = doublethink.bma.preciser,
-		doublethink.bma.yet.preciser = doublethink.bma.yet.preciser,
+		doublethink.bma.1df.preciser = doublethink.bma.1df.preciser,
 		doublethink.modelselection = doublethink.modelselection
    ))
 }
@@ -1292,8 +1277,8 @@ do.analyses = function(data, params, nu=data@m, dblthk.h = c(0.25, 1, 4), dblthk
 		results[[paste0("doublethink bma ", doublethink.name)]] = results.doublethink$doublethink.bma[[doublethink.name]]
 		# Doublethink BMA: preciser denominators
 		results[[paste0("doublethink bma preciser ", doublethink.name)]] = results.doublethink$doublethink.bma.preciser[[doublethink.name]]
-		# Doublethink BMA: yet preciser denominators
-		results[[paste0("doublethink bma yet preciser ", doublethink.name)]] = results.doublethink$doublethink.bma.yet.preciser[[doublethink.name]]
+		# Doublethink BMA: 1df preciser denominators
+		results[[paste0("doublethink bma 1df preciser ", doublethink.name)]] = results.doublethink$doublethink.bma.1df.preciser[[doublethink.name]]
 		# Doublethink MAP-based model selection
 		results[[paste0("doublethink model selection ", doublethink.name)]] = results.doublethink$doublethink.modelselection[[doublethink.name]]
 	}
