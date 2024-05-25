@@ -231,7 +231,7 @@ performance.typeI = function(test.signif, param.signif) (1-param.signif)*test.si
 performance.typeII = function(test.signif, param.signif) param.signif*(1-test.signif)
 performance.familywise = function(elementwise) 1*(sum(elementwise)>0)
 performance.error.rate = function(num, den) sum(num)/pmax(1, sum(den))
-performance.pfdr = function(num, den) as.double(ifelse(sum(den==0), NA, sum(num)/sum(den)))
+na.if = function(cond) ifelse(cond, as.double(NA), as.double(1))
 
 calc.test.performance = function(test.signif, param.signif, param.names=NULL) {
 	stopifnot(length(test.signif)==length(param.signif))
@@ -243,9 +243,9 @@ calc.test.performance = function(test.signif, param.signif, param.names=NULL) {
 		typeI = typeI,
 		typeII = typeII,
 		call = test.signif,
-		familywiseI = performance.familywise(typeI),
-		familywiseII = performance.familywise(typeII),
-		pfdr = performance.pfdr(typeI, test.signif),
+		familywiseI = performance.familywise(typeI) * na.if(all(param.signif==1)),
+		familywiseII = performance.familywise(typeII) * na.if(all(param.signif==0)),
+		pfdr = performance.error.rate(typeI, test.signif) * na.if(all(test.signif==0)),
 		fdr = performance.error.rate(typeI, test.signif),
 		fndr = performance.error.rate(typeII, 1-test.signif),
 		fpr = performance.error.rate(typeI, 1-param.signif),
@@ -1142,8 +1142,8 @@ combine.test.performance = function(performance.list, test.name) {
 			typeI = rowMeans.robust(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@typeI)),
 			typeII = rowMeans.robust(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@typeII)),
 			call = rowMeans.robust(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@call)),
-			familywiseI = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@familywiseI)),
-			familywiseII = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@familywiseII)),
+			familywiseI = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@familywiseI), na.rm=TRUE),
+			familywiseII = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@familywiseII), na.rm=TRUE),
 			pfdr = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@pfdr), na.rm=TRUE),
 			fdr = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@fdr)),
 			fndr = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@fndr)),
@@ -1171,8 +1171,8 @@ combine.pvalueTest.performance = function(performance.list, test.name, pvalueTes
 			typeI = rowMeans.robust(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)[[pvalueTest.name]]@typeI)),
 			typeII = rowMeans.robust(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)[[pvalueTest.name]]@typeII)),
 			call = rowMeans.robust(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)[[pvalueTest.name]]@call)),
-			familywiseI = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)[[pvalueTest.name]]@familywiseI)),
-			familywiseII = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)[[pvalueTest.name]]@familywiseII)),
+			familywiseI = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)[[pvalueTest.name]]@familywiseI), na.rm=TRUE),
+			familywiseII = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)[[pvalueTest.name]]@familywiseII), na.rm=TRUE),
 			pfdr = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)[[pvalueTest.name]]@pfdr), na.rm=TRUE),
 			fdr = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)[[pvalueTest.name]]@fdr)),
 			fndr = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)[[pvalueTest.name]]@fndr)),
@@ -1223,18 +1223,6 @@ combine.performance = function(performance.list) {
 	if(length(performance.list[[1]]@freqt.headline@bias)>0) ret@freqt.headline = combine.test.performance(performance.list, "freqt.headline")
 	if(length(performance.list[[1]]@bayes.headline@bias)>0) ret@bayes.headline = combine.test.performance(performance.list, "bayes.headline")
 
-	if(FALSE) ret@bayes.marginal = new("bmsim_test_performance",
-		bias = rowMeans(sapply(1:nsim, function(i) performance.list[[i]]@bayes.marginal@bias)),
-		typeI = rowMeans(sapply(1:nsim, function(i) performance.list[[i]]@bayes.marginal@typeI)),
-		typeII = rowMeans(sapply(1:nsim, function(i) performance.list[[i]]@bayes.marginal@typeII)),
-		familywiseI = mean(sapply(1:nsim, function(i) performance.list[[i]]@bayes.marginal@familywiseI)),
-		familywiseII = mean(sapply(1:nsim, function(i) performance.list[[i]]@bayes.marginal@familywiseII)),
-		fdr = mean(sapply(1:nsim, function(i) performance.list[[i]]@bayes.marginal@fdr)),
-		fndr = mean(sapply(1:nsim, function(i) performance.list[[i]]@bayes.marginal@fndr)),
-		fpr = mean(sapply(1:nsim, function(i) performance.list[[i]]@bayes.marginal@fpr)),
-		fnr = mean(sapply(1:nsim, function(i) performance.list[[i]]@bayes.marginal@fnr))
-	)
-	
 	# pvalue tests
 	ret@pvalueTests.marginal = lapply(names(performance.list[[1]]@pvalueTests.marginal), function(pvalueTest.name) combine.pvalueTest.performance(performance.list, "pvalueTests.marginal", pvalueTest.name))
 	names(ret@pvalueTests.marginal) <- names(performance.list[[1]]@pvalueTests.marginal)
