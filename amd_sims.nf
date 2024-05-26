@@ -13,7 +13,6 @@ shell:
 }
 
 process simulate {
-beforeScript "module add R/4.2.1-foss-2022a"
 input:
 	val taskid
 	path parameters_filename
@@ -122,7 +121,6 @@ shell:
 }
 
 process combine_performance {
-beforeScript "module add R/4.2.1-foss-2022a"
 publishDir "${params.publishDir}", mode: "copy"
 memory "${params.combine_performance_mem} GB"
 input:
@@ -185,7 +183,6 @@ shell:
 }
 
 process simulate_parameters {
-beforeScript "module add R/4.2.1-foss-2022a"
 publishDir "${params.publishDir}", mode: "copy"
 input:
 output:
