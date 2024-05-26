@@ -398,7 +398,7 @@ calc.Bonferroni = function(p.unadj, nu, params=NULL) {
 	names(p.pair) <- names.pair[lower.tri(names.pair)]
 	p.truenull = as.double(NA)
 	if(!is.null(params)) {
-		p.truenull = min(p.adjust[params==0])
+		p.truenull = min(p.adj[params==0])
 		names(p.truenull) <- paste(names(p.unadj)[params==0], collapse=" | ")
 	}
 	p.headline = min(p.adj)
@@ -536,7 +536,7 @@ calc.Hommel = function(p.unadj, nu, params=NULL) {
 	names(p.pair) <- names.pair[lower.tri(names.pair)]
 	p.truenull = as.double(NA)
 	if(!is.null(params)) {
-		p.truenull = min(p.adjust[params==0])
+		p.truenull = min(p.adj[params==0])
 		names(p.truenull) <- paste(names(p.unadj)[params==0], collapse=" | ")
 	}
 	p.headline = min(p.adj)
