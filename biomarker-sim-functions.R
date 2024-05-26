@@ -1341,8 +1341,8 @@ combine.performance = function(performance.list) {
 	ret@bayes.marginal = combine.test.performance(performance.list, "bayes.marginal")
 	if(length(performance.list[[1]]@freqt.pairwise@bias)>0) ret@freqt.pairwise = combine.test.performance(performance.list, "freqt.pairwise")
 	if(length(performance.list[[1]]@bayes.pairwise@bias)>0) ret@bayes.pairwise = combine.test.performance(performance.list, "bayes.pairwise")
-	if(length(performance.list[[1]]@freqt.truenull@bias)>0) ret@freqt.headline = combine.test.performance(performance.list, "freqt.truenull")
-	if(length(performance.list[[1]]@bayes.truenull@bias)>0) ret@bayes.headline = combine.test.performance(performance.list, "bayes.truenull")
+	if(length(performance.list[[1]]@freqt.truenull@bias)>0) ret@freqt.truenull = combine.test.performance(performance.list, "freqt.truenull")
+	if(length(performance.list[[1]]@bayes.truenull@bias)>0) ret@bayes.truenull = combine.test.performance(performance.list, "bayes.truenull")
 	if(length(performance.list[[1]]@freqt.headline@bias)>0) ret@freqt.headline = combine.test.performance(performance.list, "freqt.headline")
 	if(length(performance.list[[1]]@bayes.headline@bias)>0) ret@bayes.headline = combine.test.performance(performance.list, "bayes.headline")
 
