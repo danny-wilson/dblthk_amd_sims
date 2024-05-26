@@ -540,7 +540,7 @@ calc.Hommel = function(p.unadj, nu, params=NULL) {
 		names(p.truenull) <- paste(names(p.unadj)[params==0], collapse=" | ")
 	}
 	p.headline = min(p.adj)
-	names(headline) <- paste(names(p.unadj), collapse=" | ")
+	names(p.headline) <- paste(names(p.unadj), collapse=" | ")
 	ret = new("bmsim_pvalueTests",
 		method = "Multilevel Simes test; Hommel 1988, Goeman et al (2019)",
 		marginal.neglog10padj = -log10(p.adj),
