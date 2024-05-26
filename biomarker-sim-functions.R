@@ -504,7 +504,7 @@ calc.Simes = function(p.unadj, nu, params=NULL) {
 	names(p.pair) <- names.pair[lower.tri(names.pair)]
 	p.truenull = as.double(NA)
 	if(!is.null(params)) {
-		p.truenull = p.simes(c(p.unadj[params==0], rep(1, sum(params!=0))), L=nu)
+		p.truenull = p.Simes(c(p.unadj[params==0], rep(1, sum(params!=0))), L=nu)
 		names(p.truenull) <- paste(names(p.unadj)[params==0], collapse=" | ")
 	}
 	p.headline = p.Simes(p.unadj, L=nu)
