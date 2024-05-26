@@ -387,7 +387,7 @@ setMethod("performance", "bmsim_analysisResults", function(obj, parameter, newda
 calc.Bonferroni = function(p.unadj, nu, params=NULL) {
 	stopifnot(nu>=length(p.unadj))
 	if(!is.null(params)) {
-		stopifnot(length(params)!=length(p.unadj))
+		stopifnot(length(params)==length(p.unadj))
 		stopifnot(all(!is.na(params)))
 	}
 	p.adj = p.adjust(p.unadj, method="bonferroni", n=nu)
@@ -416,7 +416,7 @@ calc.Bonferroni = function(p.unadj, nu, params=NULL) {
 calc.BH = function(p.unadj, nu, params=NULL) {
 	stopifnot(nu>=length(p.unadj))
 	if(!is.null(params)) {
-		stopifnot(length(params)!=length(p.unadj))
+		stopifnot(length(params)==length(p.unadj))
 		stopifnot(all(!is.na(params)))
 	}
 	p.pair = outer(p.unadj, p.unadj, Vectorize(function(x, y) min(p.adjust(c(x, y), method="BH", n=nu))))
@@ -443,7 +443,7 @@ calc.BH = function(p.unadj, nu, params=NULL) {
 calc.HMP = function(p.unadj, nu, min.p.unadj=1e-308, params=NULL) {
 	stopifnot(nu>=length(p.unadj))
 	if(!is.null(params)) {
-		stopifnot(length(params)!=length(p.unadj))
+		stopifnot(length(params)==length(p.unadj))
 		stopifnot(all(!is.na(params)))
 	}
 	p.unadj = pmax(min.p.unadj, p.unadj)
@@ -495,7 +495,7 @@ p.Simes = function(p, w = NULL, L = NULL, w.sum.tolerance = 1e-6, multilevel = T
 calc.Simes = function(p.unadj, nu, params=NULL) {
 	stopifnot(nu>=length(p.unadj))
 	if(!is.null(params)) {
-		stopifnot(length(params)!=length(p.unadj))
+		stopifnot(length(params)==length(p.unadj))
 		stopifnot(all(!is.na(params)))
 	}
 	p.pair = outer(p.unadj, p.unadj, Vectorize(function(x, y) p.Simes(c(x, y), L=nu)))
@@ -524,7 +524,7 @@ calc.Hommel = function(p.unadj, nu, params=NULL) {
 	m = length(p.unadj)
 	stopifnot(nu>=m)
 	if(!is.null(params)) {
-		stopifnot(length(params)!=length(p.unadj))
+		stopifnot(length(params)==length(p.unadj))
 		stopifnot(all(!is.na(params)))
 	}
 	# Pad the p-values with the nu-m unobserved values, taking the worst case
@@ -624,7 +624,7 @@ combined.evalues = function(log.evalues, K=length(log.evalues), simple=FALSE) {
 calc.evalue = function(p.unadj, nu, kappa=0.1, params=NULL) {
 	stopifnot(nu>=length(p.unadj))
 	if(!is.null(params)) {
-		stopifnot(length(params)!=length(p.unadj))
+		stopifnot(length(params)==length(p.unadj))
 		stopifnot(all(!is.na(params)))
 	}
 	p.adj = sapply(p.unadj, Vectorize(function(p) p.evalue(p, L=nu, kappa=kappa)))
@@ -827,7 +827,7 @@ mr.bma.x = function(data, sigma=0.5, prior_prob=0.1, nsim=10, nu=data@m) {
 # Post model selection, fit a single model with all add1 and drop1 p-values
 add1drop1 = function(data, binary.inclusion.vector, nu=data@m, print.ssq=FALSE, e.value.kappa=0.1, analysis.name="Leave one out/add one in significance testing", params=NULL) {
 	if(!is.null(params)) {
-		stopifnot(length(params)!=data@m)
+		stopifnot(length(params)==data@m)
 		stopifnot(all(!is.na(params)))
 	}
 	start_time = Sys.time()
@@ -902,7 +902,7 @@ doublethink.x = function(data, h=1, mu=.1/(1-.1), nu=data@m, e.value.kappa=0.1, 
 	stopifnot(length(mu)==nanal)
 	hyper.names = paste0("mu = ", mu, "; h = ", h)
 	if(!is.null(params)) {
-		stopifnot(length(params)!=data@m)
+		stopifnot(length(params)==data@m)
 		stopifnot(all(!is.na(params)))
 	}
 	# Power parameter
