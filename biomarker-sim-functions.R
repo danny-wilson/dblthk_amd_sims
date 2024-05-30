@@ -439,6 +439,14 @@ calc.BH = function(p.unadj, nu, params=NULL) {
 	)
 }
 
+p.hmp.robust = function(p, w=NULL, L = NULL, w.sum.tolerance = 1e-06, multilevel = TRUE) {
+	if(is.null(w)) {
+		if(any(p==0.0)) return(0.0)
+	} else {
+		if(any(p/w==0.0)) return(0.0)
+	}
+	return(p.hmp(p=p, w=w, L=L, w.sum.tolerance=w.sum.tolerance, multilevel=multilevel))
+}
 # Harmonic mean p-value procedure; Wilson (2019); anticonservative for non-small p
 calc.HMP = function(p.unadj, nu, min.p.unadj=1e-308, params=NULL) {
 	stopifnot(nu>=length(p.unadj))
@@ -447,18 +455,18 @@ calc.HMP = function(p.unadj, nu, min.p.unadj=1e-308, params=NULL) {
 		stopifnot(all(!is.na(params)))
 	}
 	p.unadj = pmax(min.p.unadj, p.unadj)
-	p.adj = sapply(p.unadj, Vectorize(function(p) p.hmp(c(p, rep(1, nu-1)), L=nu)))
+	p.adj = sapply(p.unadj, Vectorize(function(p) p.hmp.robust(c(p, rep(1, nu-1)), L=nu)))
 	names(p.adj) <- names(p.unadj)
-	p.pair = outer(p.unadj, p.unadj, Vectorize(function(x, y) p.hmp(c(x, y, rep(1, nu-2)), L=nu)))
+	p.pair = outer(p.unadj, p.unadj, Vectorize(function(x, y) p.hmp.robust(c(x, y, rep(1, nu-2)), L=nu)))
 	names.pair = outer(names(p.unadj), names(p.unadj), Vectorize(function(x, y) paste(x, y, sep=" | ")))
 	p.pair = p.pair[lower.tri(p.pair)]
 	names(p.pair) <- names.pair[lower.tri(names.pair)]
 	p.truenull = as.double(NA)
 	if(!is.null(params)) {
-		p.truenull = p.hmp(c(p.unadj[params==0], rep(1, sum(params!=0))), L=nu)
+		p.truenull = p.hmp.robust(c(p.unadj[params==0], rep(1, sum(params!=0))), L=nu)
 		names(p.truenull) <- paste(names(p.unadj)[params==0], collapse=" | ")
 	}
-	p.headline = p.hmp(c(p.unadj, rep(1, nu-length(p.unadj))), L=nu)
+	p.headline = p.hmp.robust(c(p.unadj, rep(1, nu-length(p.unadj))), L=nu)
 	names(p.headline) <- paste(names(p.unadj), collapse=" | ")
 	ret = new("bmsim_pvalueTests",
 		method = "Harmonic mean p-value procedure; Wilson 2019",
