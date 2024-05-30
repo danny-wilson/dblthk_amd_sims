@@ -439,13 +439,35 @@ calc.BH = function(p.unadj, nu, params=NULL) {
 	)
 }
 
-p.hmp.robust = function(p, w=NULL, L = NULL, w.sum.tolerance = 1e-06, multilevel = TRUE) {
-	if(is.null(w)) {
-		if(any(p==0.0)) return(0.0)
-	} else {
-		if(any(p/w==0.0)) return(0.0)
+p.hmp.robust = function (p, w = NULL, L = NULL, w.sum.tolerance = 1e-06, multilevel = TRUE) {
+	if (is.null(L) & multilevel) {
+		warning("L not specified: for multilevel testing set L to the total number of individual p-values")
+		L = length(p)
 	}
-	return(p.hmp(p=p, w=w, L=L, w.sum.tolerance=w.sum.tolerance, multilevel=multilevel))
+	if (length(p) == 0)
+		return(NA)
+	if (length(p) > L)
+		warning("The number of p-values cannot exceed L")
+	if (is.null(w)) {
+		w = rep(1/L, length(p))
+	}
+	else if (any(w < 0)) {
+		stop("No weights can be negative")
+	}
+	w.sum = sum(w)
+	if (w.sum > 1 + w.sum.tolerance) {
+		stop("Weights cannot exceed 1")
+	}
+	HMP = hmp.stat(p, w)
+	if(HMP==0.0) return(0.0)
+	O.874 = 1 + digamma(1) - log(2/pi)
+	if (multilevel) {
+		return(c(p.hmp = w.sum * pEstable(w.sum/HMP, setParam(alpha = 1,
+			location = (log(L) + O.874), logscale = log(pi/2),
+			pm = 0), lower.tail = FALSE)))
+	}
+	return(c(p.hmp = pEstable(1/HMP, setParam(alpha = 1, location = (log(length(p)) +
+		O.874), logscale = log(pi/2), pm = 0), lower.tail = FALSE)))
 }
 # Harmonic mean p-value procedure; Wilson (2019); anticonservative for non-small p
 calc.HMP = function(p.unadj, nu, min.p.unadj=1e-308, params=NULL) {
