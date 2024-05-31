@@ -157,24 +157,33 @@ shell:
 	cat("outfile:              ", outfile, "\n")
 	cat("\n")
 
-	# Load simulation performance metrics
-	perf = list()
-	nanalyses = list()
-	for(i in 1:nfiles) {
-		perf[[i]] = readRDS(infiles[i])
-		nanalyses[[i]] = length(perf[[i]])
-		stopifnot(nanalyses[[i]]==nanalyses[[1]])
-		for(j in 1:nanalyses[[1]]) stopifnot(is(perf[[i]][[j]], "bmsim_performance"))
-	}
-	
-	# Combine analysis results
 	results = list()
-	for(i in 1:nanalyses[[1]]) {
-		# Combine the performance metrics
-		analysis.name = names(perf[[1]])[i]
-		results[[analysis.name]] = combine.performance(lapply(perf, function(PERF) PERF[[analysis.name]]))
-	}
+	for(i in 1:nfiles) {
+		# Load simulation performance metrics
+		perf = readRDS(infiles[i])
+		if(i==1) {
+			nanalyses = length(perf)
+		} else {
+			stopifnot(nanalyses==length(perf))
+		}
 	
+		# Combine analysis results
+		for(j in 1:nanalyses) {
+			# Combine the performance metrics
+			stopifnot(is(perf[[j]], "bmsim_performance"))
+			analysis.name = names(perf)[j]
+			if(i==1) {
+				results[[analysis.name]] = combine.performance.iteratively(NULL, perf[[analysis.name]], i, nfiles)
+			} else {
+				results[[analysis.name]] = combine.performance.iteratively(results[[analysis.name]], perf[[analysis.name]], i, nfiles)
+			}
+		}
+
+		# Free memory
+		rm("perf")
+		if(i %% 100==0) gc()
+	}
+
 	# Save results
 	saveRDS(results, file="combined.performance.RDS")
 
@@ -262,7 +271,7 @@ params.alpha = 0.01
 params.tau = 9
 params.simulate_independence = false
 params.repoDir = '/well/bag/wilson/GitHub/dblthk_amd_sims'
-params.combine_performance_mem = Math.max(15.0, 0.01 * params.ntasks)
+params.combine_performance_mem = 14.0
 
 // Print arguments
 // Default arguments can be overriden by specifying them in nextflow.config

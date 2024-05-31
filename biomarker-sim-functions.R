@@ -1312,6 +1312,86 @@ combine.test.performance = function(performance.list, test.name) {
 	}
 	return(ret)
 }
+// Convert NAs to zeroes
+na20 = function(x) ifelse(is.na(x), 0, x)
+combine.test.performance.iteratively = function(comb.perf=NULL, perf, iter, niter, test.name) {
+	stopifnot(is(perf, "bmsim_performance"))
+	if(is.null(comb.perf)) {
+		# On first iteration, create comb.perf from perf
+		stopifnot(iter==1)
+		comb.perf = new("bmsim_test_performance")
+		if(length(slot(perf, test.name)@bias)>0) {
+			comb.perf = new("bmsim_test_performance",
+				bias = slot(perf, test.name)@bias/niter,
+				typeI = slot(perf, test.name)@typeI/niter,
+				typeII = slot(perf, test.name)@typeII/niter,
+				call = slot(perf, test.name)@call/niter,
+				// Variable denominator
+				familywiseI = c(na20(slot(perf, test.name)@familywiseI), as.double(!is.na(slot(perf, test.name)@familywiseI))),
+				// Variable denominator
+				familywiseII = c(na20(slot(perf, test.name)@familywiseII), as.double(!is.na(slot(perf, test.name)@familywiseII))),
+				// Variable denominator
+				pfdr = c(na20(slot(perf, test.name)@pfdr), as.double(!is.na(slot(perf, test.name)@pfdr))),
+				fdr = slot(perf, test.name)@fdr/niter,
+				fndr = slot(perf, test.name)@fndr/niter,
+				// Variable denominator
+				fpr = c(na20(slot(perf, test.name)@fpr), as.double(!is.na(slot(perf, test.name)@fpr))),
+				// Variable denominator
+				fnr = c(na20(slot(perf, test.name)@fnr), as.double(!is.na(slot(perf, test.name)@fnr))),
+				tp = slot(perf, test.name)@tp/niter,
+				fp = slot(perf, test.name)@fp/niter,
+				tn = slot(perf, test.name)@tn/niter,
+				fn = slot(perf, test.name)@fn/niter
+			)
+			names(comb.perf@bias) <- names(slot(perf, test.name)@bias)
+			names(comb.perf@typeI) <- names(slot(perf, test.name)@typeI)
+			names(comb.perf@typeII) <- names(slot(perf, test.name)@typeII)
+			names(comb.perf@call) <- names(slot(perf, test.name)@call)
+		}
+	} else {
+		# Otherwise update from perf
+		stopifnot(iter!=1)
+		if(length(slot(perf, test.name)@bias)>0) {
+			stopifnot(is(comb.perf, "bmsim_test_performance"))
+
+			comb.perf@bias = comb.perf@bias + slot(perf, test.name)@bias/niter
+			comb.perf@typeI = comb.perf@typeI + slot(perf, test.name)@typeI/niter
+			comb.perf@typeII = comb.perf@typeII + slot(perf, test.name)@typeII/niter
+			comb.perf@call = comb.perf@call + slot(perf, test.name)@call/niter
+			// Variable denominator
+			comb.perf@familywiseI = comb.perf@familywiseI + c(na20(slot(perf, test.name)@familywiseI), as.double(!is.na(slot(perf, test.name)@familywiseI)))
+			// Variable denominator
+			comb.perf@familywiseII = comb.perf@familywiseII + c(na20(slot(perf, test.name)@familywiseII), as.double(!is.na(slot(perf, test.name)@familywiseII)))
+			// Variable denominator
+			comb.perf@pfdr = comb.perf@pfdr + c(na20(slot(perf, test.name)@pfdr), as.double(!is.na(slot(perf, test.name)@pfdr)))
+			comb.perf@fdr = comb.perf@fdr + slot(perf, test.name)@fdr/niter
+			comb.perf@fndr = comb.perf@fndr + slot(perf, test.name)@fndr/niter
+			// Variable denominator
+			comb.perf@fpr = comb.perf@fpr + c(na20(slot(perf, test.name)@fpr), as.double(!is.na(slot(perf, test.name)@fpr)))
+			// Variable denominator
+			comb.perf@fnr = comb.perf@fnr + c(na20(slot(perf, test.name)@fnr), as.double(!is.na(slot(perf, test.name)@fnr)))
+			comb.perf@tp = comb.perf@tp + slot(perf, test.name)@tp/niter
+			comb.perf@fp = comb.perf@fp + slot(perf, test.name)@fp/niter
+			comb.perf@tn = comb.perf@tn + slot(perf, test.name)@tn/niter
+			comb.perf@fn = comb.perf@fn + slot(perf, test.name)@fn/niter
+
+			if(iter==niter) {
+				// Apply the denominators
+				m = length(comb.perf@familywiseI)
+				comb.perf@familywiseI = comb.perf@familywiseI[1:m]/comb.perf@familywiseI[m+1:m]
+				m = length(comb.perf@familywiseII)
+				comb.perf@familywiseII = comb.perf@familywiseII[1:m]/comb.perf@familywiseII[m+1:m]
+				m = length(comb.perf@pfdr)
+				comb.perf@pfdr = comb.perf@pfdr[1:m]/comb.perf@pfdr[m+1:m]
+				m = length(comb.perf@fpr)
+				comb.perf@fpr = comb.perf@fpr[1:m]/comb.perf@fpr[m+1:m]
+				m = length(comb.perf@fnr)
+				comb.perf@fnr = comb.perf@fpr[1:m]/comb.perf@fpr[m+1:m]
+			}
+		}
+	}
+	return(comb.perf)
+}
 combine.pvalueTest.performance = function(performance.list, test.name, pvalueTest.name) {
 	# test.name is one of pvalueTests.marginal pvalueTests.pairwise pvalueTests.truenull pvalueTests.headline
 	nsim = length(performance.list)
@@ -1341,7 +1421,85 @@ combine.pvalueTest.performance = function(performance.list, test.name, pvalueTes
 	}
 	return(ret)
 }
+combine.pvalueTest.performance.iteratively = function(comb.perf=NULL, perf, iter, niter, test.name, pvalueTest.name) {
+	# test.name is one of pvalueTests.marginal pvalueTests.pairwise pvalueTests.truenull pvalueTests.headline
+	stopifnot(is(perf, "bmsim_performance"))
+	if(is.null(comb.perf)) {
+		# On first iteration, create comb.perf from perf
+		stopifnot(iter==1)
+		comb.perf = new("bmsim_test_performance")
+		if(length(slot(perf, test.name)[[pvalueTest.name]]@bias)>0) {
+			comb.perf = new("bmsim_test_performance",
+				bias = slot(perf, test.name)[[pvalueTest.name]]@bias/niter,
+				typeI = slot(perf, test.name)[[pvalueTest.name]]@typeI/niter,
+				typeII = slot(perf, test.name)[[pvalueTest.name]]@typeII/niter,
+				call = slot(perf, test.name)[[pvalueTest.name]]@call/niter,
+				// Variable denominator
+				familywiseI = c(na20(slot(perf, test.name)[[pvalueTest.name]]@familywiseI), as.double(!is.na(slot(perf, test.name)[[pvalueTest.name]]@familywiseI))),
+				// Variable denominator
+				familywiseII = c(na20(slot(perf, test.name)[[pvalueTest.name]]@familywiseII), as.double(!is.na(slot(perf, test.name)[[pvalueTest.name]]@familywiseII))),
+				// Variable denominator
+				pfdr = c(na20(slot(perf, test.name)[[pvalueTest.name]]@pfdr), as.double(!is.na(slot(perf, test.name)[[pvalueTest.name]]@pfdr))),
+				fdr = slot(perf, test.name)[[pvalueTest.name]]@fdr/niter,
+				fndr = slot(perf, test.name)[[pvalueTest.name]]@fndr/niter,
+				// Variable denominator
+				fpr = c(na20(slot(perf, test.name)[[pvalueTest.name]]@fpr), as.double(!is.na(slot(perf, test.name)[[pvalueTest.name]]@fpr))),
+				// Variable denominator
+				fnr = c(na20(slot(perf, test.name)[[pvalueTest.name]]@fnr), as.double(!is.na(slot(perf, test.name)[[pvalueTest.name]]@fnr))),
+				tp = slot(perf, test.name)[[pvalueTest.name]]@tp/niter,
+				fp = slot(perf, test.name)[[pvalueTest.name]]@fp/niter,
+				tn = slot(perf, test.name)[[pvalueTest.name]]@tn/niter,
+				fn = slot(perf, test.name)[[pvalueTest.name]]@fn/niter
+			)
+			names(comb.perf@bias) <- names(slot(perf, test.name)[[pvalueTest.name]]@bias)
+			names(comb.perf@typeI) <- names(slot(perf, test.name)[[pvalueTest.name]]@typeI)
+			names(comb.perf@typeII) <- names(slot(perf, test.name)[[pvalueTest.name]]@typeII)
+			names(comb.perf@call) <- names(slot(perf, test.name)[[pvalueTest.name]]@call)
+		}
+	} else {
+		# Otherwise update from perf
+		stopifnot(iter!=1)
+		if(length(slot(perf, test.name)[[pvalueTest.name]]@bias)>0) {
+			stopifnot(is(comb.perf, "bmsim_test_performance"))
 
+			comb.perf@bias = comb.perf@bias + slot(perf, test.name)[[pvalueTest.name]]@bias/niter
+			comb.perf@typeI = comb.perf@typeI + slot(perf, test.name)[[pvalueTest.name]]@typeI/niter
+			comb.perf@typeII = comb.perf@typeII + slot(perf, test.name)[[pvalueTest.name]]@typeII/niter
+			comb.perf@call = comb.perf@call + slot(perf, test.name)[[pvalueTest.name]]@call/niter
+			// Variable denominator
+			comb.perf@familywiseI = comb.perf@familywiseI + c(na20(slot(perf, test.name)[[pvalueTest.name]]@familywiseI), as.double(!is.na(slot(perf, test.name)[[pvalueTest.name]]@familywiseI)))
+			// Variable denominator
+			comb.perf@familywiseII = comb.perf@familywiseII + c(na20(slot(perf, test.name)[[pvalueTest.name]]@familywiseII), as.double(!is.na(slot(perf, test.name)[[pvalueTest.name]]@familywiseII)))
+			// Variable denominator
+			comb.perf@pfdr = comb.perf@pfdr + c(na20(slot(perf, test.name)[[pvalueTest.name]]@pfdr), as.double(!is.na(slot(perf, test.name)[[pvalueTest.name]]@pfdr)))
+			comb.perf@fdr = comb.perf@fdr + slot(perf, test.name)[[pvalueTest.name]]@fdr/niter
+			comb.perf@fndr = comb.perf@fndr + slot(perf, test.name)[[pvalueTest.name]]@fndr/niter
+			// Variable denominator
+			comb.perf@fpr = comb.perf@fpr + c(na20(slot(perf, test.name)[[pvalueTest.name]]@fpr), as.double(!is.na(slot(perf, test.name)[[pvalueTest.name]]@fpr)))
+			// Variable denominator
+			comb.perf@fnr = comb.perf@fnr + c(na20(slot(perf, test.name)[[pvalueTest.name]]@fnr), as.double(!is.na(slot(perf, test.name)[[pvalueTest.name]]@fnr)))
+			comb.perf@tp = comb.perf@tp + slot(perf, test.name)[[pvalueTest.name]]@tp/niter
+			comb.perf@fp = comb.perf@fp + slot(perf, test.name)[[pvalueTest.name]]@fp/niter
+			comb.perf@tn = comb.perf@tn + slot(perf, test.name)[[pvalueTest.name]]@tn/niter
+			comb.perf@fn = comb.perf@fn + slot(perf, test.name)[[pvalueTest.name]]@fn/niter
+
+			if(iter==niter) {
+				// Apply the denominators
+				m = length(comb.perf@familywiseI)
+				comb.perf@familywiseI = comb.perf@familywiseI[1:m]/comb.perf@familywiseI[m+1:m]
+				m = length(comb.perf@familywiseII)
+				comb.perf@familywiseII = comb.perf@familywiseII[1:m]/comb.perf@familywiseII[m+1:m]
+				m = length(comb.perf@pfdr)
+				comb.perf@pfdr = comb.perf@pfdr[1:m]/comb.perf@pfdr[m+1:m]
+				m = length(comb.perf@fpr)
+				comb.perf@fpr = comb.perf@fpr[1:m]/comb.perf@fpr[m+1:m]
+				m = length(comb.perf@fnr)
+				comb.perf@fnr = comb.perf@fpr[1:m]/comb.perf@fpr[m+1:m]
+			}
+		}
+	}
+	return(comb.perf)
+}
 # Combine a list of performance objects applied to comparable analyses
 combine.performance = function(performance.list) {
 	nsim = length(performance.list)
@@ -1406,6 +1564,108 @@ combine.performance = function(performance.list) {
 	return(ret)
 }
 
+# Iteratively combine performance objects applied to comparable analyses
+combine.performance.iteratively = function(comb.perf=NULL, perf, iter, niter) {
+	stopifnot(is(perf, "bmsim_performance"))
+	stopifnot(iter>0)
+	stopifnot(iter<=niter)
+	if(is.null(comb.perf)) {
+		# On first iteration, create comb.perf from perf
+		stopifnot(iter==1)
+		comb.perf = perf
+
+		# Estimate
+		comb.perf@estimate.bias = perf@estimate.bias/niter
+		comb.perf@estimate.L1 = perf@estimate.L1/niter
+		comb.perf@estimate.L2 = perf@estimate.L2/niter
+	
+		# Std Error
+		comb.perf@stderr.coverage = perf@stderr.coverage/niter
+
+		# Prediction
+		comb.perf@prediction.L1 = perf@prediction.L1/niter
+		comb.perf@prediction.L2 = perf@prediction.L2/niter
+
+		# Computation time (seconds)
+		comb.perf@time.secs = perf@time.secs/niter
+
+		# Hypothesis tests
+		comb.perf@freqt.marginal = combine.test.performance.iteratively(NULL, perf, iter, niter, "freqt.marginal")
+		comb.perf@bayes.marginal = combine.test.performance.iteratively(NULL, perf, iter, niter, "bayes.marginal")
+		if(length(comb.perf@freqt.pairwise@bias)>0) comb.perf@freqt.pairwise = combine.test.performance.iteratively(NULL, perf, iter, niter, "freqt.pairwise")
+		if(length(comb.perf@bayes.pairwise@bias)>0) comb.perf@bayes.pairwise = combine.test.performance.iteratively(NULL, perf, iter, niter, "bayes.pairwise")
+		if(length(comb.perf@freqt.truenull@bias)>0) comb.perf@freqt.truenull = combine.test.performance.iteratively(NULL, perf, iter, niter, "freqt.truenull")
+		if(length(comb.perf@bayes.truenull@bias)>0) comb.perf@bayes.truenull = combine.test.performance.iteratively(NULL, perf, iter, niter, "bayes.truenull")
+		if(length(comb.perf@freqt.headline@bias)>0) comb.perf@freqt.headline = combine.test.performance.iteratively(NULL, perf, iter, niter, "freqt.headline")
+		if(length(comb.perf@bayes.headline@bias)>0) comb.perf@bayes.headline = combine.test.performance.iteratively(NULL, perf, iter, niter, "bayes.headline")
+
+		# pvalue tests
+		comb.perf@pvalueTests.marginal = lapply(names(comb.perf@pvalueTests.marginal), function(pvalueTest.name) combine.pvalueTest.performance.iteratively(NULL, perf, iter, niter, "pvalueTests.marginal", pvalueTest.name))
+		names(comb.perf@pvalueTests.marginal) <- names(comb.perf@pvalueTests.marginal)
+		comb.perf@pvalueTests.pairwise = lapply(names(comb.perf@pvalueTests.pairwise), function(pvalueTest.name) combine.pvalueTest.performance.iteratively(NULL, perf, iter, niter, "pvalueTests.pairwise", pvalueTest.name))
+		names(comb.perf@pvalueTests.pairwise) <- names(comb.perf@pvalueTests.pairwise)
+		comb.perf@pvalueTests.truenull = lapply(names(comb.perf@pvalueTests.truenull), function(pvalueTest.name) combine.pvalueTest.performance.iteratively(NULL, perf, iter, niter, "pvalueTests.truenull", pvalueTest.name))
+		names(comb.perf@pvalueTests.truenull) <- names(comb.perf@pvalueTests.truenull)
+		comb.perf@pvalueTests.headline = lapply(names(comb.perf@pvalueTests.headline), function(pvalueTest.name) combine.pvalueTest.performance.iteratively(NULL, perf, iter, niter, "pvalueTests.headline", pvalueTest.name))
+		names(comb.perf@pvalueTests.headline) <- names(comb.perf@pvalueTests.headline)
+
+	} else {
+		# Otherwise test for compatibility with perf
+		stopifnot(iter!=1)
+		stopifnot(is(comb.perf, "bmsim_performance"))
+		stopifnot(perf@m == comb.perf@m)
+		stopifnot(all(perf@names == comb.perf@names))
+
+		# Estimate
+		comb.perf@estimate.bias = comb.perf@estimate.bias + perf@estimate.bias/niter
+		comb.perf@estimate.L1 = comb.perf@estimate.L1 + perf@estimate.L1/niter
+		comb.perf@estimate.L2 = comb.perf@estimate.L2 + perf@estimate.L2/niter
+	
+		# Std Error
+		comb.perf@stderr.coverage = comb.perf@stderr.coverage + perf@stderr.coverage/niter
+	
+		# Prediction
+		comb.perf@prediction.L1 = comb.perf@prediction.L1 + perf@prediction.L1/niter
+		comb.perf@prediction.L2 = comb.perf@prediction.L2 + perf@prediction.L2/niter
+
+		# Computation time (seconds)
+		comb.perf@time.secs = comb.perf@time.secs + perf@time.secs/niter
+
+		# Hypothesis tests
+		comb.perf@freqt.marginal = combine.test.performance.iteratively(comb.perf@freqt.marginal, perf, iter, niter, "freqt.marginal")
+		comb.perf@bayes.marginal = combine.test.performance.iteratively(comb.perf@bayes.marginal, perf, iter, niter, "bayes.marginal")
+		if(length(comb.perf@freqt.pairwise@bias)>0) comb.perf@freqt.pairwise = combine.test.performance.iteratively(comb.perf@freqt.pairwise, perf, iter, niter, "freqt.pairwise")
+		if(length(comb.perf@bayes.pairwise@bias)>0) comb.perf@bayes.pairwise = combine.test.performance.iteratively(comb.perf@bayes.pairwise, perf, iter, niter, "bayes.pairwise")
+		if(length(comb.perf@freqt.truenull@bias)>0) comb.perf@freqt.truenull = combine.test.performance.iteratively(comb.perf@freqt.truenull, perf, iter, niter, "freqt.truenull")
+		if(length(comb.perf@bayes.truenull@bias)>0) comb.perf@bayes.truenull = combine.test.performance.iteratively(comb.perf@bayes.truenull, perf, iter, niter, "bayes.truenull")
+		if(length(comb.perf@freqt.headline@bias)>0) comb.perf@freqt.headline = combine.test.performance.iteratively(comb.perf@freqt.headline, perf, iter, niter, "freqt.headline")
+		if(length(comb.perf@bayes.headline@bias)>0) comb.perf@bayes.headline = combine.test.performance.iteratively(comb.perf@bayes.headline, perf, iter, niter, "bayes.headline")
+
+		# pvalue tests
+		comb.perf@pvalueTests.marginal = lapply(names(comb.perf@pvalueTests.marginal), function(pvalueTest.name) combine.pvalueTest.performance.iteratively(comb.perf@pvalueTests.marginal[[pvalueTest.name]], perf, iter, niter, "pvalueTests.marginal", pvalueTest.name))
+		names(comb.perf@pvalueTests.marginal) <- names(comb.perf@pvalueTests.marginal)
+		comb.perf@pvalueTests.pairwise = lapply(names(comb.perf@pvalueTests.pairwise), function(pvalueTest.name) combine.pvalueTest.performance.iteratively(comb.perf@pvalueTests.pairwise[[pvalueTest.name]], perf, iter, niter, "pvalueTests.pairwise", pvalueTest.name))
+		names(comb.perf@pvalueTests.pairwise) <- names(comb.perf@pvalueTests.pairwise)
+		comb.perf@pvalueTests.truenull = lapply(names(comb.perf@pvalueTests.truenull), function(pvalueTest.name) combine.pvalueTest.performance.iteratively(comb.perf@pvalueTests.truenull[[pvalueTest.name]], perf, iter, niter, "pvalueTests.truenull", pvalueTest.name))
+		names(comb.perf@pvalueTests.truenull) <- names(comb.perf@pvalueTests.truenull)
+		comb.perf@pvalueTests.headline = lapply(names(comb.perf@pvalueTests.headline), function(pvalueTest.name) combine.pvalueTest.performance.iteratively(comb.perf@pvalueTests.headline[[pvalueTest.name]], perf, iter, niter, "pvalueTests.headline", pvalueTest.name))
+		names(comb.perf@pvalueTests.headline) <- names(comb.perf@pvalueTests.headline)
+	}
+	
+	if(iter==niter) {
+		# Apply names
+		names(comb.perf@estimate.bias) <- comb.perf@names
+		names(comb.perf@stderr.coverage) <- comb.perf@names
+		names(comb.perf@freqt.marginal@bias) <- comb.perf@names
+		names(comb.perf@freqt.marginal@typeI) <- comb.perf@names
+		names(comb.perf@freqt.marginal@typeII) <- comb.perf@names
+		names(comb.perf@bayes.marginal@bias) <- comb.perf@names
+		names(comb.perf@bayes.marginal@typeI) <- comb.perf@names
+		names(comb.perf@bayes.marginal@typeII) <- comb.perf@names
+	}
+	
+	return(comb.perf)
+}
 # Perform a standardized set of analyses of a single dataset
 do.analyses = function(data, params, nu=data@m, dblthk.h = c(0.25, 1, 4), dblthk.mu = c(0.05, 0.1, 0.2), mr.bma.nsim=1000, mr.bma.sigma=0.5, mr.bma.prior_prob=0.1) {
 	stopifnot(is(data, "bmsim_data"))
