@@ -1312,7 +1312,7 @@ combine.test.performance = function(performance.list, test.name) {
 	}
 	return(ret)
 }
-// Convert NAs to zeroes
+# Convert NAs to zeroes
 na20 = function(x) ifelse(is.na(x), 0, x)
 combine.test.performance.iteratively = function(comb.perf=NULL, perf, iter, niter, test.name) {
 	stopifnot(is(perf, "bmsim_performance"))
@@ -1326,17 +1326,17 @@ combine.test.performance.iteratively = function(comb.perf=NULL, perf, iter, nite
 				typeI = slot(perf, test.name)@typeI/niter,
 				typeII = slot(perf, test.name)@typeII/niter,
 				call = slot(perf, test.name)@call/niter,
-				// Variable denominator
+				# Variable denominator
 				familywiseI = c(na20(slot(perf, test.name)@familywiseI), as.double(!is.na(slot(perf, test.name)@familywiseI))),
-				// Variable denominator
+				# Variable denominator
 				familywiseII = c(na20(slot(perf, test.name)@familywiseII), as.double(!is.na(slot(perf, test.name)@familywiseII))),
-				// Variable denominator
+				# Variable denominator
 				pfdr = c(na20(slot(perf, test.name)@pfdr), as.double(!is.na(slot(perf, test.name)@pfdr))),
 				fdr = slot(perf, test.name)@fdr/niter,
 				fndr = slot(perf, test.name)@fndr/niter,
-				// Variable denominator
+				# Variable denominator
 				fpr = c(na20(slot(perf, test.name)@fpr), as.double(!is.na(slot(perf, test.name)@fpr))),
-				// Variable denominator
+				# Variable denominator
 				fnr = c(na20(slot(perf, test.name)@fnr), as.double(!is.na(slot(perf, test.name)@fnr))),
 				tp = slot(perf, test.name)@tp/niter,
 				fp = slot(perf, test.name)@fp/niter,
@@ -1358,17 +1358,17 @@ combine.test.performance.iteratively = function(comb.perf=NULL, perf, iter, nite
 			comb.perf@typeI = comb.perf@typeI + slot(perf, test.name)@typeI/niter
 			comb.perf@typeII = comb.perf@typeII + slot(perf, test.name)@typeII/niter
 			comb.perf@call = comb.perf@call + slot(perf, test.name)@call/niter
-			// Variable denominator
+			# Variable denominator
 			comb.perf@familywiseI = comb.perf@familywiseI + c(na20(slot(perf, test.name)@familywiseI), as.double(!is.na(slot(perf, test.name)@familywiseI)))
-			// Variable denominator
+			# Variable denominator
 			comb.perf@familywiseII = comb.perf@familywiseII + c(na20(slot(perf, test.name)@familywiseII), as.double(!is.na(slot(perf, test.name)@familywiseII)))
-			// Variable denominator
+			# Variable denominator
 			comb.perf@pfdr = comb.perf@pfdr + c(na20(slot(perf, test.name)@pfdr), as.double(!is.na(slot(perf, test.name)@pfdr)))
 			comb.perf@fdr = comb.perf@fdr + slot(perf, test.name)@fdr/niter
 			comb.perf@fndr = comb.perf@fndr + slot(perf, test.name)@fndr/niter
-			// Variable denominator
+			# Variable denominator
 			comb.perf@fpr = comb.perf@fpr + c(na20(slot(perf, test.name)@fpr), as.double(!is.na(slot(perf, test.name)@fpr)))
-			// Variable denominator
+			# Variable denominator
 			comb.perf@fnr = comb.perf@fnr + c(na20(slot(perf, test.name)@fnr), as.double(!is.na(slot(perf, test.name)@fnr)))
 			comb.perf@tp = comb.perf@tp + slot(perf, test.name)@tp/niter
 			comb.perf@fp = comb.perf@fp + slot(perf, test.name)@fp/niter
@@ -1376,7 +1376,7 @@ combine.test.performance.iteratively = function(comb.perf=NULL, perf, iter, nite
 			comb.perf@fn = comb.perf@fn + slot(perf, test.name)@fn/niter
 
 			if(iter==niter) {
-				// Apply the denominators
+				# Apply the denominators
 				m = length(comb.perf@familywiseI)
 				comb.perf@familywiseI = comb.perf@familywiseI[1:m]/comb.perf@familywiseI[m+1:m]
 				m = length(comb.perf@familywiseII)
@@ -1434,17 +1434,17 @@ combine.pvalueTest.performance.iteratively = function(comb.perf=NULL, perf, iter
 				typeI = slot(perf, test.name)[[pvalueTest.name]]@typeI/niter,
 				typeII = slot(perf, test.name)[[pvalueTest.name]]@typeII/niter,
 				call = slot(perf, test.name)[[pvalueTest.name]]@call/niter,
-				// Variable denominator
+				# Variable denominator
 				familywiseI = c(na20(slot(perf, test.name)[[pvalueTest.name]]@familywiseI), as.double(!is.na(slot(perf, test.name)[[pvalueTest.name]]@familywiseI))),
-				// Variable denominator
+				# Variable denominator
 				familywiseII = c(na20(slot(perf, test.name)[[pvalueTest.name]]@familywiseII), as.double(!is.na(slot(perf, test.name)[[pvalueTest.name]]@familywiseII))),
-				// Variable denominator
+				# Variable denominator
 				pfdr = c(na20(slot(perf, test.name)[[pvalueTest.name]]@pfdr), as.double(!is.na(slot(perf, test.name)[[pvalueTest.name]]@pfdr))),
 				fdr = slot(perf, test.name)[[pvalueTest.name]]@fdr/niter,
 				fndr = slot(perf, test.name)[[pvalueTest.name]]@fndr/niter,
-				// Variable denominator
+				# Variable denominator
 				fpr = c(na20(slot(perf, test.name)[[pvalueTest.name]]@fpr), as.double(!is.na(slot(perf, test.name)[[pvalueTest.name]]@fpr))),
-				// Variable denominator
+				# Variable denominator
 				fnr = c(na20(slot(perf, test.name)[[pvalueTest.name]]@fnr), as.double(!is.na(slot(perf, test.name)[[pvalueTest.name]]@fnr))),
 				tp = slot(perf, test.name)[[pvalueTest.name]]@tp/niter,
 				fp = slot(perf, test.name)[[pvalueTest.name]]@fp/niter,
@@ -1466,17 +1466,17 @@ combine.pvalueTest.performance.iteratively = function(comb.perf=NULL, perf, iter
 			comb.perf@typeI = comb.perf@typeI + slot(perf, test.name)[[pvalueTest.name]]@typeI/niter
 			comb.perf@typeII = comb.perf@typeII + slot(perf, test.name)[[pvalueTest.name]]@typeII/niter
 			comb.perf@call = comb.perf@call + slot(perf, test.name)[[pvalueTest.name]]@call/niter
-			// Variable denominator
+			# Variable denominator
 			comb.perf@familywiseI = comb.perf@familywiseI + c(na20(slot(perf, test.name)[[pvalueTest.name]]@familywiseI), as.double(!is.na(slot(perf, test.name)[[pvalueTest.name]]@familywiseI)))
-			// Variable denominator
+			# Variable denominator
 			comb.perf@familywiseII = comb.perf@familywiseII + c(na20(slot(perf, test.name)[[pvalueTest.name]]@familywiseII), as.double(!is.na(slot(perf, test.name)[[pvalueTest.name]]@familywiseII)))
-			// Variable denominator
+			# Variable denominator
 			comb.perf@pfdr = comb.perf@pfdr + c(na20(slot(perf, test.name)[[pvalueTest.name]]@pfdr), as.double(!is.na(slot(perf, test.name)[[pvalueTest.name]]@pfdr)))
 			comb.perf@fdr = comb.perf@fdr + slot(perf, test.name)[[pvalueTest.name]]@fdr/niter
 			comb.perf@fndr = comb.perf@fndr + slot(perf, test.name)[[pvalueTest.name]]@fndr/niter
-			// Variable denominator
+			# Variable denominator
 			comb.perf@fpr = comb.perf@fpr + c(na20(slot(perf, test.name)[[pvalueTest.name]]@fpr), as.double(!is.na(slot(perf, test.name)[[pvalueTest.name]]@fpr)))
-			// Variable denominator
+			# Variable denominator
 			comb.perf@fnr = comb.perf@fnr + c(na20(slot(perf, test.name)[[pvalueTest.name]]@fnr), as.double(!is.na(slot(perf, test.name)[[pvalueTest.name]]@fnr)))
 			comb.perf@tp = comb.perf@tp + slot(perf, test.name)[[pvalueTest.name]]@tp/niter
 			comb.perf@fp = comb.perf@fp + slot(perf, test.name)[[pvalueTest.name]]@fp/niter
@@ -1484,7 +1484,7 @@ combine.pvalueTest.performance.iteratively = function(comb.perf=NULL, perf, iter
 			comb.perf@fn = comb.perf@fn + slot(perf, test.name)[[pvalueTest.name]]@fn/niter
 
 			if(iter==niter) {
-				// Apply the denominators
+				# Apply the denominators
 				m = length(comb.perf@familywiseI)
 				comb.perf@familywiseI = comb.perf@familywiseI[1:m]/comb.perf@familywiseI[m+1:m]
 				m = length(comb.perf@familywiseII)
