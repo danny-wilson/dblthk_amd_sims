@@ -122,7 +122,6 @@ shell:
 
 process combine_performance {
 publishDir "${params.publishDir}", mode: "copy"
-memory "${params.combine_performance_mem} GB"
 input:
 	path(infiles)
 output:
