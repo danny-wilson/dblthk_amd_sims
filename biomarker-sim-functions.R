@@ -1377,15 +1377,15 @@ combine.test.performance.iteratively = function(comb.perf=NULL, perf, iter, nite
 
 			if(iter==niter) {
 				# Apply the denominators
-				m = length(comb.perf@familywiseI)
+				m = length(comb.perf@familywiseI)/2
 				comb.perf@familywiseI = comb.perf@familywiseI[1:m]/comb.perf@familywiseI[m+1:m]
-				m = length(comb.perf@familywiseII)
+				m = length(comb.perf@familywiseII)/2
 				comb.perf@familywiseII = comb.perf@familywiseII[1:m]/comb.perf@familywiseII[m+1:m]
-				m = length(comb.perf@pfdr)
+				m = length(comb.perf@pfdr)/2
 				comb.perf@pfdr = comb.perf@pfdr[1:m]/comb.perf@pfdr[m+1:m]
-				m = length(comb.perf@fpr)
+				m = length(comb.perf@fpr)/2
 				comb.perf@fpr = comb.perf@fpr[1:m]/comb.perf@fpr[m+1:m]
-				m = length(comb.perf@fnr)
+				m = length(comb.perf@fnr)/2
 				comb.perf@fnr = comb.perf@fpr[1:m]/comb.perf@fpr[m+1:m]
 			}
 		}
@@ -1485,15 +1485,15 @@ combine.pvalueTest.performance.iteratively = function(comb.perf=NULL, perf, iter
 
 			if(iter==niter) {
 				# Apply the denominators
-				m = length(comb.perf@familywiseI)
+				m = length(comb.perf@familywiseI)/2
 				comb.perf@familywiseI = comb.perf@familywiseI[1:m]/comb.perf@familywiseI[m+1:m]
-				m = length(comb.perf@familywiseII)
+				m = length(comb.perf@familywiseII)/2
 				comb.perf@familywiseII = comb.perf@familywiseII[1:m]/comb.perf@familywiseII[m+1:m]
-				m = length(comb.perf@pfdr)
+				m = length(comb.perf@pfdr)/2
 				comb.perf@pfdr = comb.perf@pfdr[1:m]/comb.perf@pfdr[m+1:m]
-				m = length(comb.perf@fpr)
+				m = length(comb.perf@fpr)/2
 				comb.perf@fpr = comb.perf@fpr[1:m]/comb.perf@fpr[m+1:m]
-				m = length(comb.perf@fnr)
+				m = length(comb.perf@fnr)/2
 				comb.perf@fnr = comb.perf@fpr[1:m]/comb.perf@fpr[m+1:m]
 			}
 		}
