@@ -903,13 +903,13 @@ add1drop1 = function(data, binary.inclusion.vector, nu=data@m, print.ssq=FALSE, 
 	names(ret@signif.log10po) <- ret@names
 	names(pval) <- ret@names
 	ret@pvalueTests = list(
-		"Bonf" = calc.Bonferroni(pval, nu, params),
-		"BH" = calc.BH(pval, nu, params),
-		"HMP" = calc.HMP(pval, nu, params),
-		"Simes" = calc.Simes(pval, nu, params),
-		"Hommel" = calc.Hommel(pval, nu, params),
+		"Bonf" = calc.Bonferroni(pval, nu, params=params),
+		"BH" = calc.BH(pval, nu, params=params),
+		"HMP" = calc.HMP(pval, nu, params=params),
+		"Simes" = calc.Simes(pval, nu, params=params),
+		"Hommel" = calc.Hommel(pval, nu, params=params),
 		"Cauchy" = calc.Cauchy(pval, nu),
-		"Evalue" = calc.evalue(pval, nu, kappa=e.value.kappa, params)
+		"Evalue" = calc.evalue(pval, nu, kappa=e.value.kappa, params=params)
 	)
 	validate(ret)
 	return(ret)
