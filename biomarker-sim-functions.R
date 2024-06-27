@@ -768,7 +768,7 @@ filter.data = function(data, m=as.integer(15), results.univariable.MR=NULL) {
 	validate(data)
 	stopifnot(is(m,"integer"))
 	if(is.null(results.univariable.MR)) {
-		results.univariable.MR = univariable.MR(full.data)
+		results.univariable.MR = univariable.MR(data)
 	} else {
 		validate(results.univariable.MR)
 		stopifnot(results.univariable.MR@data == data@id)
