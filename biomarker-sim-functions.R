@@ -789,6 +789,59 @@ filter.data = function(data, m=as.integer(15), results.univariable.MR=NULL) {
 	return(ret)
 }
 
+# Introduce variables in descending order of univariate association
+# Disallow the inclusion of variables in high correlation with others already included
+filter.correlated.data = function(full.data, m=as.integer(15), rsq.max.thresh = 0.2, results.univariable.MR=NULL) {
+	stopifnot(m>0)
+	validate(full.data)
+	stopifnot(is(m,"integer"))
+	if(is.null(results.univariable.MR)) {
+		results.univariable.MR = univariable.MR(full.data)
+	} else {
+		validate(results.univariable.MR)
+		stopifnot(results.univariable.MR@data == full.data@id)
+		stopifnot(!any(is.na(results.univariable.MR@signif.neglog10padj)))
+	}
+	# Compute squared correlation between variables
+	rsq = cor(full.data@x)^2
+	# Primarily sort variables for inclusion by their univariable association
+	od = order(-results.univariable.MR@signif.neglog10padj)
+	# Storage for which variables to retain and which are paired (highly correlated)
+	keep = rep(FALSE, full.data@m)
+	pair = rep(FALSE, full.data@m)
+	# Always include the variable with strongest univariable association
+	keep[1] = TRUE
+	# Cycle until m are included
+	if(m>1) for(i in 2:m) {
+		# Calculate the maximum rsq between included variables and already paired and included variables
+		rsq.max = suppressWarnings(apply(rsq[od, od][, keep & pair, drop=FALSE], 1, max))
+		# Which is the next best variable-to-include
+		wh = which(!keep)[rsq.max[!keep] < rsq.max.thresh][1]
+		# Flag whether the variable-to-include is highly correlated with already paired and included ones
+		wh.is.pair = keep & rsq[od, od][, wh]>rsq.max.thresh
+		# Could be paired with more than one other, which would be a problem: no smart way to deal with this currently
+		stopifnot(sum(wh.is.pair)<=1)
+		# Update
+		keep[wh] = TRUE
+		if(sum(wh.is.pair)==1) {
+			pair[wh] = TRUE
+			pair[wh.is.pair] = TRUE
+		}
+	}
+	top = od[keep]
+	ret = new("bmsim_data",
+		id = paste0(full.data@id, "_", m, "_biomarkers"),
+		y = full.data@y,
+		x = full.data@x[,top],
+		n = full.data@n,
+		m = m,
+		y.name = full.data@y.name,
+		x.names = full.data@x.names[top]
+	)
+	validate(ret)
+	return(ret)
+}
+
 # Exhaustive MR-BMA analysis
 mr.bma.x = function(data, sigma=0.5, prior_prob=0.1, nsim=10, nu=data@m) {
 	validate(data)
