@@ -429,8 +429,8 @@ calc.Bonferroni = function(p.unadj, nu, params=NULL) {
 	if(!is.null(params)) {
 		p.truenull = apply(params, 2, function(PARAMS) min(p.adj[PARAMS==0]))
 		p.truealts = apply(params, 2, function(PARAMS) min(p.adj[PARAMS!=0]))
-		names(p.truenull) <- trimws(paste(colnames(params), paste(names(p.unadj)[PARAMS==0], collapse=" | ")))
-		names(p.truealts) <- trimws(paste(colnames(params), paste(names(p.unadj)[PARAMS!=0], collapse=" | ")))
+		names(p.truenull) <- trimws(paste(colnames(params), apply(params, 2, function(PARAMS) paste(names(p.unadj)[PARAMS==0], collapse=" | "))))
+		names(p.truealts) <- trimws(paste(colnames(params), apply(params, 2, function(PARAMS) paste(names(p.unadj)[PARAMS!=0], collapse=" | "))))
 	}
 	p.headline = min(p.adj)
 	names(p.headline) <- paste(names(p.unadj), collapse=" | ")
@@ -461,8 +461,8 @@ calc.BH = function(p.unadj, nu, params=NULL) {
 	if(!is.null(params)) {
 		p.truenull = apply(params, 2, function(PARAMS) min(p.adjust(p.unadj[PARAMS==0], method="BH", n=nu)))
 		p.truealts = apply(params, 2, function(PARAMS) min(p.adjust(p.unadj[PARAMS!=0], method="BH", n=nu)))
-		names(p.truenull) <- trimws(paste(colnames(params), paste(names(p.unadj)[PARAMS==0], collapse=" | ")))
-		names(p.truealts) <- trimws(paste(colnames(params), paste(names(p.unadj)[PARAMS!=0], collapse=" | ")))
+		names(p.truenull) <- trimws(paste(colnames(params), apply(params, 2, function(PARAMS) paste(names(p.unadj)[PARAMS==0], collapse=" | "))))
+		names(p.truealts) <- trimws(paste(colnames(params), apply(params, 2, function(PARAMS) paste(names(p.unadj)[PARAMS!=0], collapse=" | "))))
 	}
 	p.headline = min(p.adjust(p.unadj, method="BH", n=nu))
 	names(p.headline) <- paste(names(p.unadj), collapse=" | ")
@@ -528,8 +528,8 @@ calc.HMP = function(p.unadj, nu, min.p.unadj=1e-308, params=NULL) {
 	if(!is.null(params)) {
 		p.truenull = apply(params, 2, function(PARAMS) p.hmp.robust(c(p.unadj[PARAMS==0], rep(1, nu-sum(PARAMS==0))), L=nu))
 		p.truealts = apply(params, 2, function(PARAMS) p.hmp.robust(c(p.unadj[PARAMS!=0], rep(1, nu-sum(PARAMS!=0))), L=nu))
-		names(p.truenull) <- trimws(paste(colnames(params), paste(names(p.unadj)[PARAMS==0], collapse=" | ")))
-		names(p.truealts) <- trimws(paste(colnames(params), paste(names(p.unadj)[PARAMS!=0], collapse=" | ")))
+		names(p.truenull) <- trimws(paste(colnames(params), apply(params, 2, function(PARAMS) paste(names(p.unadj)[PARAMS==0], collapse=" | "))))
+		names(p.truealts) <- trimws(paste(colnames(params), apply(params, 2, function(PARAMS) paste(names(p.unadj)[PARAMS!=0], collapse=" | "))))
 	}
 	p.headline = p.hmp.robust(c(p.unadj, rep(1, nu-length(p.unadj))), L=nu)
 	names(p.headline) <- paste(names(p.unadj), collapse=" | ")
@@ -582,8 +582,8 @@ calc.Simes = function(p.unadj, nu, params=NULL) {
 	if(!is.null(params)) {
 		p.truenull = apply(params, 2, function(PARAMS) p.Simes(c(p.unadj[PARAMS==0], rep(1, sum(PARAMS!=0))), L=nu))
 		p.truealts = apply(params, 2, function(PARAMS) p.Simes(c(p.unadj[PARAMS!=0], rep(1, sum(PARAMS==0))), L=nu))
-		names(p.truenull) <- trimws(paste(colnames(params), paste(names(p.unadj)[PARAMS==0], collapse=" | ")))
-		names(p.truealts) <- trimws(paste(colnames(params), paste(names(p.unadj)[PARAMS!=0], collapse=" | ")))
+		names(p.truenull) <- trimws(paste(colnames(params), apply(params, 2, function(PARAMS) paste(names(p.unadj)[PARAMS==0], collapse=" | "))))
+		names(p.truealts) <- trimws(paste(colnames(params), apply(params, 2, function(PARAMS) paste(names(p.unadj)[PARAMS!=0], collapse=" | "))))
 	}
 	p.headline = p.Simes(p.unadj, L=nu)
 	names(p.headline) <- paste(names(p.unadj), collapse=" | ")
@@ -619,8 +619,8 @@ calc.Hommel = function(p.unadj, nu, params=NULL) {
 	if(!is.null(params)) {
 		p.truenull = apply(params, 2, function(PARAMS) min(p.adj[PARAMS==0]))
 		p.truealts = apply(params, 2, function(PARAMS) min(p.adj[PARAMS!=0]))
-		names(p.truenull) <- trimws(paste(colnames(params), paste(names(p.unadj)[PARAMS==0], collapse=" | ")))
-		names(p.truealts) <- trimws(paste(colnames(params), paste(names(p.unadj)[PARAMS!=0], collapse=" | ")))
+		names(p.truenull) <- trimws(paste(colnames(params), apply(params, 2, function(PARAMS) paste(names(p.unadj)[PARAMS==0], collapse=" | "))))
+		names(p.truealts) <- trimws(paste(colnames(params), apply(params, 2, function(PARAMS) paste(names(p.unadj)[PARAMS!=0], collapse=" | "))))
 	}
 	p.headline = min(p.adj)
 	names(p.headline) <- paste(names(p.unadj), collapse=" | ")
@@ -661,8 +661,8 @@ calc.Cauchy = function(p.unadj, nu, params=NULL) {
 	if(!is.null(params)) {
 		p.truenull = apply(params, 2, function(PARAMS) p.Cauchy(p.unadj[PARAMS==0]) * nu/length(p.unadj[PARAMS==0]))
 		p.truealts = apply(params, 2, function(PARAMS) p.Cauchy(p.unadj[PARAMS!=0]) * nu/length(p.unadj[PARAMS!=0]))
-		names(p.truenull) <- trimws(paste(colnames(params), paste("Not a CTP:", paste(names(p.unadj)[PARAMS==0], collapse=" | "))))
-		names(p.truealts) <- trimws(paste(colnames(params), paste("Not a CTP:", paste(names(p.unadj)[PARAMS!=0], collapse=" | "))))
+		names(p.truenull) <- trimws(paste("Not a CTP:", colnames(params), apply(params, 2, function(PARAMS) paste(names(p.unadj)[PARAMS==0], collapse=" | "))))
+		names(p.truealts) <- trimws(paste("Not a CTP:", colnames(params), apply(params, 2, function(PARAMS) paste(names(p.unadj)[PARAMS!=0], collapse=" | "))))
 	}
 	p.headline = p.Cauchy(p.unadj) * nu/length(p.unadj)
 	names(p.headline) <- paste("Not a CTP:", paste(names(p.unadj), collapse=" | "))
@@ -773,8 +773,8 @@ calc.evalue = function(p.unadj, nu, kappa=0.1, params=NULL) {
 	if(!is.null(params)) {
 		p.truenull = apply(params, 2, function(PARAMS) p.evalue(p.unadj[PARAMS==0], L=nu, kappa=kappa))
 		p.truealts = apply(params, 2, function(PARAMS) p.evalue(p.unadj[PARAMS!=0], L=nu, kappa=kappa))
-		names(p.truenull) <- trimws(paste(colnames(params), paste(names(p.unadj)[PARAMS==0], collapse=" | ")))
-		names(p.truealts) <- trimws(paste(colnames(params), paste(names(p.unadj)[PARAMS!=0], collapse=" | ")))
+		names(p.truenull) <- trimws(paste(colnames(params), apply(params, 2, function(PARAMS) paste(names(p.unadj)[PARAMS==0], collapse=" | "))))
+		names(p.truealts) <- trimws(paste(colnames(params), apply(params, 2, function(PARAMS) paste(names(p.unadj)[PARAMS!=0], collapse=" | "))))
 	}
 	p.headline = p.evalue(c(p.unadj, rep(1, nu-length(p.unadj))), L=nu, kappa=kappa)
 	names(p.headline) <- paste(names(p.unadj), collapse=" | ")
