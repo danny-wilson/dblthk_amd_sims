@@ -414,7 +414,8 @@ setMethod("performance", "bmsim_analysisResults", function(obj, parameter, newda
 calc.Bonferroni = function(p.unadj, nu, params=NULL) {
 	stopifnot(nu>=length(p.unadj))
 	if(!is.null(params)) {
-		stopifnot(length(params)==length(p.unadj))
+		params = as.matrix(params)
+		stopifnot(nrow(params)==length(p.unadj))
 		stopifnot(all(!is.na(params)))
 	}
 	p.adj = p.adjust(p.unadj, method="bonferroni", n=nu)
@@ -426,10 +427,10 @@ calc.Bonferroni = function(p.unadj, nu, params=NULL) {
 	p.truenull = as.double(NA)
 	p.truealts = as.double(NA)
 	if(!is.null(params)) {
-		p.truenull = min(p.adj[params==0])
-		p.truealts = min(p.adj[params!=0])
-		names(p.truenull) <- paste(names(p.unadj)[params==0], collapse=" | ")
-		names(p.truealts) <- paste(names(p.unadj)[params!=0], collapse=" | ")
+		p.truenull = apply(params, 2, function(PARAMS) min(p.adj[PARAMS==0]))
+		p.truealts = apply(params, 2, function(PARAMS) min(p.adj[PARAMS!=0]))
+		names(p.truenull) <- trimws(paste(colnames(params), paste(names(p.unadj)[params==0], collapse=" | ")))
+		names(p.truealts) <- trimws(paste(colnames(params), paste(names(p.unadj)[params!=0], collapse=" | ")))
 	}
 	p.headline = min(p.adj)
 	names(p.headline) <- paste(names(p.unadj), collapse=" | ")
@@ -447,7 +448,8 @@ calc.Bonferroni = function(p.unadj, nu, params=NULL) {
 calc.BH = function(p.unadj, nu, params=NULL) {
 	stopifnot(nu>=length(p.unadj))
 	if(!is.null(params)) {
-		stopifnot(length(params)==length(p.unadj))
+		params = as.matrix(params)
+		stopifnot(nrow(params)==length(p.unadj))
 		stopifnot(all(!is.na(params)))
 	}
 	p.pair = outer(p.unadj, p.unadj, Vectorize(function(x, y) min(p.adjust(c(x, y), method="BH", n=nu))))
@@ -457,10 +459,10 @@ calc.BH = function(p.unadj, nu, params=NULL) {
 	p.truenull = as.double(NA)
 	p.truealts = as.double(NA)
 	if(!is.null(params)) {
-		p.truenull = min(p.adjust(p.unadj[params==0], method="BH", n=nu))
-		p.truealts = min(p.adjust(p.unadj[params!=0], method="BH", n=nu))
-		names(p.truenull) <- paste(names(p.unadj)[params==0], collapse=" | ")
-		names(p.truealts) <- paste(names(p.unadj)[params!=0], collapse=" | ")
+		p.truenull = apply(params, 2, function(PARAMS) min(p.adjust(p.unadj[PARAMS==0], method="BH", n=nu)))
+		p.truealts = apply(params, 2, function(PARAMS) min(p.adjust(p.unadj[PARAMS!=0], method="BH", n=nu)))
+		names(p.truenull) <- trimws(paste(colnames(params), paste(names(p.unadj)[params==0], collapse=" | ")))
+		names(p.truealts) <- trimws(paste(colnames(params), paste(names(p.unadj)[params!=0], collapse=" | ")))
 	}
 	p.headline = min(p.adjust(p.unadj, method="BH", n=nu))
 	names(p.headline) <- paste(names(p.unadj), collapse=" | ")
@@ -508,7 +510,8 @@ p.hmp.robust = function (p, w = NULL, L = NULL, w.sum.tolerance = 1e-06, multile
 calc.HMP = function(p.unadj, nu, min.p.unadj=1e-308, params=NULL) {
 	stopifnot(nu>=length(p.unadj))
 	if(!is.null(params)) {
-		stopifnot(length(params)==length(p.unadj))
+		params = as.matrix(params)
+		stopifnot(nrow(params)==length(p.unadj))
 		stopifnot(all(!is.na(params)))
 	}
 	nms = names(p.unadj)
@@ -523,10 +526,10 @@ calc.HMP = function(p.unadj, nu, min.p.unadj=1e-308, params=NULL) {
 	p.truenull = as.double(NA)
 	p.truealts = as.double(NA)
 	if(!is.null(params)) {
-		p.truenull = p.hmp.robust(c(p.unadj[params==0], rep(1, nu-sum(params==0))), L=nu)
-		p.truealts = p.hmp.robust(c(p.unadj[params!=0], rep(1, nu-sum(params!=0))), L=nu)
-		names(p.truenull) <- paste(names(p.unadj)[params==0], collapse=" | ")
-		names(p.truealts) <- paste(names(p.unadj)[params!=0], collapse=" | ")
+		p.truenull = apply(params, 2, function(PARAMS) p.hmp.robust(c(p.unadj[PARAMS==0], rep(1, nu-sum(PARAMS==0))), L=nu))
+		p.truealts = apply(params, 2, function(PARAMS) p.hmp.robust(c(p.unadj[PARAMS!=0], rep(1, nu-sum(PARAMS!=0))), L=nu))
+		names(p.truenull) <- trimws(paste(colnames(params), paste(names(p.unadj)[params==0], collapse=" | ")))
+		names(p.truealts) <- trimws(paste(colnames(params), paste(names(p.unadj)[params!=0], collapse=" | ")))
 	}
 	p.headline = p.hmp.robust(c(p.unadj, rep(1, nu-length(p.unadj))), L=nu)
 	names(p.headline) <- paste(names(p.unadj), collapse=" | ")
@@ -566,7 +569,8 @@ p.Simes = function(p, w = NULL, L = NULL, w.sum.tolerance = 1e-6, multilevel = T
 calc.Simes = function(p.unadj, nu, params=NULL) {
 	stopifnot(nu>=length(p.unadj))
 	if(!is.null(params)) {
-		stopifnot(length(params)==length(p.unadj))
+		params = as.matrix(params)
+		stopifnot(nrow(params)==length(p.unadj))
 		stopifnot(all(!is.na(params)))
 	}
 	p.pair = outer(p.unadj, p.unadj, Vectorize(function(x, y) p.Simes(c(x, y), L=nu)))
@@ -576,10 +580,10 @@ calc.Simes = function(p.unadj, nu, params=NULL) {
 	p.truenull = as.double(NA)
 	p.truealts = as.double(NA)
 	if(!is.null(params)) {
-		p.truenull = p.Simes(c(p.unadj[params==0], rep(1, sum(params!=0))), L=nu)
-		p.truealts = p.Simes(c(p.unadj[params!=0], rep(1, sum(params0=0))), L=nu)
-		names(p.truenull) <- paste(names(p.unadj)[params==0], collapse=" | ")
-		names(p.truealts) <- paste(names(p.unadj)[params!=0], collapse=" | ")
+		p.truenull = apply(params, 2, function(PARAMS) p.Simes(c(p.unadj[PARAMS==0], rep(1, sum(PARAMS!=0))), L=nu))
+		p.truealts = apply(params, 2, function(PARAMS) p.Simes(c(p.unadj[PARAMS!=0], rep(1, sum(PARAMS==0))), L=nu))
+		names(p.truenull) <- trimws(paste(colnames(params), paste(names(p.unadj)[params==0], collapse=" | ")))
+		names(p.truealts) <- trimws(paste(colnames(params), paste(names(p.unadj)[params!=0], collapse=" | ")))
 	}
 	p.headline = p.Simes(p.unadj, L=nu)
 	names(p.headline) <- paste(names(p.unadj), collapse=" | ")
@@ -599,7 +603,8 @@ calc.Hommel = function(p.unadj, nu, params=NULL) {
 	m = length(p.unadj)
 	stopifnot(nu>=m)
 	if(!is.null(params)) {
-		stopifnot(length(params)==length(p.unadj))
+		params = as.matrix(params)
+		stopifnot(nrow(params)==length(p.unadj))
 		stopifnot(all(!is.na(params)))
 	}
 	# Pad the p-values with the nu-m unobserved values, taking the worst case
@@ -612,10 +617,10 @@ calc.Hommel = function(p.unadj, nu, params=NULL) {
 	p.truenull = as.double(NA)
 	p.truealts = as.double(NA)
 	if(!is.null(params)) {
-		p.truenull = min(p.adj[params==0])
-		p.truealts = min(p.adj[params!=0])
-		names(p.truenull) <- paste(names(p.unadj)[params==0], collapse=" | ")
-		names(p.truealts) <- paste(names(p.unadj)[params!=0], collapse=" | ")
+		p.truenull = apply(params, 2, function(PARAMS) min(p.adj[PARAMS==0]))
+		p.truealts = apply(params, 2, function(PARAMS) min(p.adj[PARAMS!=0]))
+		names(p.truenull) <- trimws(paste(colnames(params), paste(names(p.unadj)[params==0], collapse=" | ")))
+		names(p.truealts) <- trimws(paste(colnames(params), paste(names(p.unadj)[params!=0], collapse=" | ")))
 	}
 	p.headline = min(p.adj)
 	names(p.headline) <- paste(names(p.unadj), collapse=" | ")
@@ -640,6 +645,11 @@ p.Cauchy = function(p, w=rep(1/length(p), length(p))) {
 # This is ok for the headline test, but not a valid shortcut CTP
 calc.Cauchy = function(p.unadj, nu, params=NULL) {
 	stopifnot(nu>=length(p.unadj))
+	if(!is.null(params)) {
+		params = as.matrix(params)
+		stopifnot(nrow(params)==length(p.unadj))
+		stopifnot(all(!is.na(params)))
+	}
 	p.adj = p.adjust(p.unadj, method="bonferroni", n=nu)
 	names(p.adj) <- paste("Not a CTP:", names(p.unadj))
 	p.pair = outer(p.unadj, p.unadj, Vectorize(function(x, y) p.Cauchy(c(x, y)) * nu/2))
@@ -649,10 +659,10 @@ calc.Cauchy = function(p.unadj, nu, params=NULL) {
 	p.truenull = as.double(NA)
 	p.truealts = as.double(NA)
 	if(!is.null(params)) {
-		p.truenull = p.Cauchy(p.unadj[params==0]) * nu/length(p.unadj[params==0])
-		p.truealts = p.Cauchy(p.unadj[params!=0]) * nu/length(p.unadj[params!=0])
-		names(p.truenull) <- paste("Not a CTP:", paste(names(p.unadj)[params==0], collapse=" | "))
-		names(p.truealts) <- paste("Not a CTP:", paste(names(p.unadj)[params!=0], collapse=" | "))
+		p.truenull = apply(params, 2, function(PARAMS) p.Cauchy(p.unadj[PARAMS==0]) * nu/length(p.unadj[PARAMS==0]))
+		p.truealts = apply(params, 2, function(PARAMS) p.Cauchy(p.unadj[PARAMS!=0]) * nu/length(p.unadj[PARAMS!=0]))
+		names(p.truenull) <- trimws(paste(colnames(params), paste("Not a CTP:", paste(names(p.unadj)[params==0], collapse=" | "))))
+		names(p.truealts) <- trimws(paste(colnames(params), paste("Not a CTP:", paste(names(p.unadj)[params!=0], collapse=" | "))))
 	}
 	p.headline = p.Cauchy(p.unadj) * nu/length(p.unadj)
 	names(p.headline) <- paste("Not a CTP:", paste(names(p.unadj), collapse=" | "))
@@ -748,7 +758,8 @@ combined.evalues = function(log.evalues, K=length(log.evalues), simple=FALSE) {
 calc.evalue = function(p.unadj, nu, kappa=0.1, params=NULL) {
 	stopifnot(nu>=length(p.unadj))
 	if(!is.null(params)) {
-		stopifnot(length(params)==length(p.unadj))
+		params = as.matrix(params)
+		stopifnot(nrow(params)==length(p.unadj))
 		stopifnot(all(!is.na(params)))
 	}
 	p.adj = sapply(p.unadj, Vectorize(function(p) p.evalue(p, L=nu, kappa=kappa)))
@@ -760,10 +771,10 @@ calc.evalue = function(p.unadj, nu, kappa=0.1, params=NULL) {
 	p.truenull = as.double(NA)
 	p.truealts = as.double(NA)
 	if(!is.null(params)) {
-		p.truenull = p.evalue(p.unadj[params==0], L=nu, kappa=kappa)
-		p.truealts = p.evalue(p.unadj[params!=0], L=nu, kappa=kappa)
-		names(p.truenull) <- paste(names(p.unadj)[params==0], collapse=" | ")
-		names(p.truealts) <- paste(names(p.unadj)[params!=0], collapse=" | ")
+		p.truenull = apply(params, 2, function(PARAMS) p.evalue(p.unadj[PARAMS==0], L=nu, kappa=kappa))
+		p.truealts = apply(params, 2, function(PARAMS) p.evalue(p.unadj[PARAMS!=0], L=nu, kappa=kappa))
+		names(p.truenull) <- trimws(paste(colnames(params), paste(names(p.unadj)[params==0], collapse=" | ")))
+		names(p.truealts) <- trimws(paste(colnames(params), paste(names(p.unadj)[params!=0], collapse=" | ")))
 	}
 	p.headline = p.evalue(c(p.unadj, rep(1, nu-length(p.unadj))), L=nu, kappa=kappa)
 	names(p.headline) <- paste(names(p.unadj), collapse=" | ")
@@ -1009,7 +1020,8 @@ mr.bma.x = function(data, sigma=0.5, prior_prob=0.1, nsim=10, nu=data@m) {
 # Post model selection, fit a single model with all add1 and drop1 p-values
 add1drop1 = function(data, binary.inclusion.vector, nu=data@m, print.ssq=FALSE, e.value.kappa=0.1, analysis.name="Leave one out/add one in significance testing", params=NULL) {
 	if(!is.null(params)) {
-		stopifnot(length(params)==data@m)
+		params = as.matrix(params)
+		stopifnot(nrow(params)==data@m)
 		stopifnot(all(!is.na(params)))
 	}
 	start_time = Sys.time()
@@ -1084,7 +1096,8 @@ doublethink.x = function(data, h=1, mu=.1/(1-.1), nu=data@m, e.value.kappa=0.1, 
 	stopifnot(length(mu)==nanal)
 	hyper.names = paste0("mu = ", mu, "; h = ", h)
 	if(!is.null(params)) {
-		stopifnot(length(params)==data@m)
+		params = as.matrix(params)
+		stopifnot(nrow(params)==data@m)
 		stopifnot(all(!is.na(params)))
 	}
 	# Power parameter
@@ -1151,38 +1164,54 @@ doublethink.x = function(data, h=1, mu=.1/(1-.1), nu=data@m, e.value.kappa=0.1, 
 	# Model inclusion vector for set of true nulls
 	s.truenull = matrix(as.logical(NA), nrow=nrow(s), ncol=1)
 	if(!is.null(params)) {
-		wh = which(params==0)
-		if(length(wh)>0) {
-			s.truenull = matrix(rowSums(s[,wh,drop=FALSE])>0, nrow=nrow(s), ncol=1)
-			colnames(s.truenull) <- paste(colnames(s)[wh], collapse=" | ")
+		s.truenull = matrix(as.double(NA), nrow=nrow(s), ncol=ncol(params), dimnames=list(1:nrow(s), 1:ncol(params)))
+		for(j in 1:ncol(params)) {
+			wh = which(params[,j]==0)
+			if(length(wh)>0) {
+				s.truenull[,j] = rowSums(s[,wh,drop=FALSE])>0
+				colnames(s.truenull)[j] <- paste(colnames(s)[wh], collapse=" | ")
+			}
 		}
+		colnames(s.truenull) <- trimws(paste(colnames(params), colnames(s.truenull)))
 	}
 	# Model inclusion vector for set of true nulls: one degree of freedom tests
 	s.truenull.xor = matrix(as.logical(NA), nrow=nrow(s), ncol=1)
 	if(!is.null(params)) {
-		wh = which(params==0)
-		if(length(wh)>0) {
-			s.truenull.xor = matrix(rowSums(s[,wh,drop=FALSE])==1, nrow=nrow(s), ncol=1)
-			colnames(s.truenull.xor) <- paste(colnames(s)[wh], collapse=" ^ ")
+		s.truenull.xor = matrix(as.logical(NA), nrow=nrow(s), ncol=ncol(params), dimnames=list(1:nrow(s), 1:ncol(params)))
+		for(j in 1:ncol(params)) {
+			wh = which(params[,j]==0)
+			if(length(wh)>0) {
+				s.truenull.xor[,j] = rowSums(s[,wh,drop=FALSE])==1
+				colnames(s.truenull.xor)[j] <- paste(colnames(s)[wh], collapse=" ^ ")
+			}
 		}
+		colnames(s.truenull.xor) <- trimws(paste(colnames(params), colnames(s.truenull.xor)))
 	}
 	# Model inclusion vector for set of true alternatives
 	s.truealts = matrix(as.logical(NA), nrow=nrow(s), ncol=1)
 	if(!is.null(params)) {
-		wh = which(params!=0)
-		if(length(wh)>0) {
-			s.truealts = matrix(rowSums(s[,wh,drop=FALSE])>0, nrow=nrow(s), ncol=1)
-			colnames(s.truealts) <- paste(colnames(s)[wh], collapse=" | ")
+		s.truealts = matrix(as.logical(NA), nrow=nrow(s), ncol=ncol(params), dimnames=list(1:nrow(s), 1:ncol(params)))
+		for(j in 1:ncol(params)) {
+			wh = which(params[,j]!=0)
+			if(length(wh)>0) {
+				s.truealts[,j] = rowSums(s[,wh,drop=FALSE])>0
+				colnames(s.truealts)[j] <- paste(colnames(s)[wh], collapse=" | ")
+			}
 		}
+		colnames(s.truealts) <- trimws(paste(colnames(params), colnames(s.truealts)))
 	}
 	# Model inclusion vector for set of true alts: one degree of freedom tests
 	s.truealts.xor = matrix(as.logical(NA), nrow=nrow(s), ncol=1)
 	if(!is.null(params)) {
-		wh = which(params!=0)
-		if(length(wh)>0) {
-			s.truealts.xor = matrix(rowSums(s[,wh,drop=FALSE])==1, nrow=nrow(s), ncol=1)
-			colnames(s.truealts.xor) <- paste(colnames(s)[wh], collapse=" ^ ")
+		s.truealts.xor = matrix(as.logical(NA), nrow=nrow(s), ncol=ncol(params), dimnames=list(1:nrow(s), 1:ncol(params)))
+		for(j in 1:ncol(params)) {
+			wh = which(params[,j]!=0)
+			if(length(wh)>0) {
+				s.truealts.xor[,j] = rowSums(s[,wh,drop=FALSE])==1
+				colnames(s.truealts.xor)[j] <- paste(colnames(s)[wh], collapse=" ^ ")
+			}
 		}
+		colnames(s.truealts.xor) <- trimws(paste(colnames(params), colnames(s.truealts.xor)))
 	}
 	# Compute the return objects: model-averaged results
 	doublethink.bma = list()
@@ -1236,7 +1265,7 @@ doublethink.x = function(data, h=1, mu=.1/(1-.1), nu=data@m, e.value.kappa=0.1, 
 					"Hommel" = calc.Hommel(p.unadj.marginal, nu, params=params),
 					"Cauchy" = calc.Cauchy(p.unadj.marginal, nu, params=params),
 					"Evalue" = calc.evalue(p.unadj.marginal, nu, kappa=e.value.kappa, params=params),
-					"Evalue.BF2p" = calc.evalue.BF2p(log10(PO.marginal) - log10(mu[j]), log10(PO.pairwise) - log10(2*mu[j]), log10(PO.truenull) - log10(sum(params==0)*mu[j]), log10(PO.truealts) - log10(sum(params!=0)*mu[j]), log10(PO.headline) - log10(nu*mu[j]), nu)
+					"Evalue.BF2p" = calc.evalue.BF2p(log10(PO.marginal) - log10(mu[j]), log10(PO.pairwise) - log10(2*mu[j]), log10(PO.truenull) - log10(colSums(params==0)*mu[j]), log10(PO.truealts) - log10(colSums(params!=0)*mu[j]), log10(PO.headline) - log10(nu*mu[j]), nu)
 				 ),
 				 time.secs = as.double(difftime(end_time, start_time, units="secs"))
 			)
@@ -1271,7 +1300,7 @@ doublethink.x = function(data, h=1, mu=.1/(1-.1), nu=data@m, e.value.kappa=0.1, 
 					"Hommel" = calc.Hommel(p.unadj.marginal, nu, params=params),
 					"Cauchy" = calc.Cauchy(p.unadj.marginal, nu, params=params),
 					"Evalue" = calc.evalue(p.unadj.marginal, nu, kappa=e.value.kappa, params=params),
-					"Evalue.BF2p" = calc.evalue.BF2p(log10(PO.marginal) - log10(mu[j]), log10(PO.pairwise.1df) - log10(2*mu[j]), log10(PO.truenull.1df) - log10(sum(params==0)*mu[j]), log10(PO.truealts.1df) - log10(sum(params!=0)*mu[j]), log10(PO.headline.1df) - log10(nu*mu[j]), nu)
+					"Evalue.BF2p" = calc.evalue.BF2p(log10(PO.marginal) - log10(mu[j]), log10(PO.pairwise.1df) - log10(2*mu[j]), log10(PO.truenull.1df) - log10(colSums(params==0)*mu[j]), log10(PO.truealts.1df) - log10(colSums(params!=0)*mu[j]), log10(PO.headline.1df) - log10(nu*mu[j]), nu)
 				 ),
 				 time.secs = as.double(difftime(end_time, start_time, units="secs"))
 			)		# Closed testing procedure p-values under Theorem 2
@@ -1312,7 +1341,7 @@ doublethink.x = function(data, h=1, mu=.1/(1-.1), nu=data@m, e.value.kappa=0.1, 
 					"Hommel" = calc.Hommel(p.unadj.marginal, nu, params=params),
 					"Cauchy" = calc.Cauchy(p.unadj.marginal, nu, params=params),
 					"Evalue" = calc.evalue(p.unadj.marginal, nu, kappa=e.value.kappa, params=params),
-					"Evalue.BF2p" = calc.evalue.BF2p(log10(PO.marginal) - log10(mu[j]), log10(PO.pairwise) - log10(2*mu[j]), log10(PO.truenull) - log10(sum(params==0)*mu[j]), log10(PO.truealts) - log10(sum(params!=0)*mu[j]), log10(PO.headline) - log10(nu*mu[j]), nu)
+					"Evalue.BF2p" = calc.evalue.BF2p(log10(PO.marginal) - log10(mu[j]), log10(PO.pairwise) - log10(2*mu[j]), log10(PO.truenull) - log10(colSums(params==0)*mu[j]), log10(PO.truealts) - log10(colSums(params!=0)*mu[j]), log10(PO.headline) - log10(nu*mu[j]), nu)
 				 ),
 				 time.secs = as.double(difftime(end_time, start_time, units="secs"))
 			)
@@ -1860,15 +1889,16 @@ combine.performance.iteratively = function(comb.perf=NULL, perf, iter, niter) {
 	return(comb.perf)
 }
 # Perform a standardized set of analyses of a single dataset
-do.analyses = function(data, params, nu=data@m, dblthk.h = c(0.25, 1, 4), dblthk.mu = c(0.05, 0.1, 0.2), mr.bma.nsim=1000, mr.bma.sigma=0.5, mr.bma.prior_prob=0.1) {
+do.analyses = function(data, params, nu=data@m, dblthk.h = c(0.25, 1, 4), dblthk.mu = c(0.05, 0.1, 0.2), mr.bma.nsim=1000, mr.bma.sigma=0.5, mr.bma.prior_prob=0.1, col.oracle.params=1) {
 	stopifnot(is(data, "bmsim_data"))
 	validate(data)
-	stopifnot(length(params)==data@m)
+	params = as.matrix(params)
+	stopifnot(nrow(params)==data@m)
 	stopifnot(!any(is.na(params)))
 	
 	results = list()
 	# Single model results based on the 'oracle' model
-	results[["oracle"]] = add1drop1(data, params!=0, nu, analysis.name="Multivariable Mendelian randomization with oracle model; leave one out/add one in significance testing", params=params)
+	results[["oracle"]] = add1drop1(data, params[,col.oracle.params]!=0, nu, analysis.name="Multivariable Mendelian randomization with oracle model; leave one out/add one in significance testing", params=params)
 
 	# Single model results based on the grand null
 	results[["grand null"]] = add1drop1(data, rep(FALSE, data@m), nu, analysis.name="Multivariable Mendelian randomization with no variables; leave one out/add one in significance testing", params=params)
