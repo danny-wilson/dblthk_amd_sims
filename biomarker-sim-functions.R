@@ -29,6 +29,7 @@ setClass("bmsim_pvalueTests",
 		marginal.neglog10padj = "numeric",
 		pairwise.neglog10padj = "numeric",
 		truenull.neglog10padj = "numeric",
+		truealts.neglog10padj = "numeric",
 		headline.neglog10padj = "numeric"
 	)
 )
@@ -46,6 +47,7 @@ setClass("bmsim_analysisResults",
 		signif.neglog10padj = "numeric",
 		pairwise.signif.neglog10padj = "numeric",
 		truenull.signif.neglog10padj = "numeric",
+		truealts.signif.neglog10padj = "numeric",
 		headline.signif.neglog10padj = "numeric",
 		# Frequentist BH
 		# Frequentist HMP
@@ -58,6 +60,7 @@ setClass("bmsim_analysisResults",
 		signif.log10po = "numeric",
 		pairwise.signif.log10po = "numeric",
 		truenull.signif.log10po = "numeric",
+		truealts.signif.log10po = "numeric",
 		headline.signif.log10po = "numeric",
 		time.secs = "numeric"
 	)
@@ -120,16 +123,19 @@ setClass("bmsim_performance",
 		freqt.marginal = "bmsim_test_performance",
 		freqt.pairwise = "bmsim_test_performance",
 		freqt.truenull = "bmsim_test_performance",
+		freqt.truealts = "bmsim_test_performance",
 		freqt.headline = "bmsim_test_performance",
 		# p-value test performance,
 		pvalueTests.marginal = "list",
 		pvalueTests.pairwise = "list",
 		pvalueTests.truenull = "list",
+		pvalueTests.truealts = "list",
 		pvalueTests.headline = "list",
 		# Bayesian test performance
 		bayes.marginal = "bmsim_test_performance",
 		bayes.pairwise = "bmsim_test_performance",
 		bayes.truenull = "bmsim_test_performance",
+		bayes.truealts = "bmsim_test_performance",
 		bayes.headline = "bmsim_test_performance",
 		# Prediction performance
 		prediction.L1 = "numeric",
@@ -152,16 +158,19 @@ setClass("bmsim_performance",
 		freqt.marginal = new("bmsim_test_performance"),
 		freqt.pairwise = new("bmsim_test_performance"),
 		freqt.truenull = new("bmsim_test_performance"),
+		freqt.truealts = new("bmsim_test_performance"),
 		freqt.headline = new("bmsim_test_performance"),
 		# p-value test performance,
 		pvalueTests.marginal = list(),
 		pvalueTests.pairwise = list(),
 		pvalueTests.truenull = list(),
+		pvalueTests.truealts = list(),
 		pvalueTests.headline = list(),
 		# Bayesian test performance
 		bayes.marginal = new("bmsim_test_performance"),
 		bayes.pairwise = new("bmsim_test_performance"),
 		bayes.truenull = new("bmsim_test_performance"),
+		bayes.truealts = new("bmsim_test_performance"),
 		bayes.headline = new("bmsim_test_performance"),
 		# Prediction performance
 		prediction.L1 = double(0),
@@ -350,6 +359,24 @@ setMethod("performance", "bmsim_analysisResults", function(obj, parameter, newda
 		})
 	}
 
+	# Hypothesis tests: truealts
+	if(length(obj@truealts.signif.neglog10padj)>0) {
+		# Scalar; members of the true alts set are always truly significant
+		param.signif = 1
+
+		truealts.freqt.signif = 1*(obj@truealts.signif.neglog10padj >= thresh.neglog10padj)
+		ret@freqt.truealts = calc.test.performance(truealts.freqt.signif, param.signif, names(obj@truealts.signif.neglog10padj))
+
+		truealts.bayes.signif = 1*(obj@truealts.signif.log10po >= thresh.log10po)
+		ret@bayes.truealts = calc.test.performance(truealts.bayes.signif, param.signif, names(obj@truealts.signif.log10po))
+		
+		ret@pvalueTests.truealts = lapply(obj@pvalueTests, function(test) {
+			ret = new("bmsim_test_performance")
+			if(length(test@truealts.neglog10padj)>0) ret = calc.test.performance(1*(test@truealts.neglog10padj >= thresh.neglog10padj), param.signif, names(test@truealts.neglog10padj))
+			return(ret)
+		})
+	}
+
 	# Hypothesis tests: headline
 	if(length(obj@headline.signif.neglog10padj)>0) {
 		param.signif = 1*any(parameter!=0)
@@ -397,9 +424,12 @@ calc.Bonferroni = function(p.unadj, nu, params=NULL) {
 	p.pair = p.pair[lower.tri(p.pair)]
 	names(p.pair) <- names.pair[lower.tri(names.pair)]
 	p.truenull = as.double(NA)
+	p.truealts = as.double(NA)
 	if(!is.null(params)) {
 		p.truenull = min(p.adj[params==0])
+		p.truealts = min(p.adj[params!=0])
 		names(p.truenull) <- paste(names(p.unadj)[params==0], collapse=" | ")
+		names(p.truealts) <- paste(names(p.unadj)[params!=0], collapse=" | ")
 	}
 	p.headline = min(p.adj)
 	names(p.headline) <- paste(names(p.unadj), collapse=" | ")
@@ -408,6 +438,7 @@ calc.Bonferroni = function(p.unadj, nu, params=NULL) {
 		marginal.neglog10padj = -log10(p.adj),
 		pairwise.neglog10padj = -log10(p.pair),
 		truenull.neglog10padj = -log10(p.truenull),
+		truealts.neglog10padj = -log10(p.truealts),
 		headline.neglog10padj = -log10(p.headline)
 	)
 }
@@ -424,9 +455,12 @@ calc.BH = function(p.unadj, nu, params=NULL) {
 	p.pair = p.pair[lower.tri(p.pair)]
 	names(p.pair) <- names.pair[lower.tri(names.pair)]
 	p.truenull = as.double(NA)
+	p.truealts = as.double(NA)
 	if(!is.null(params)) {
 		p.truenull = min(p.adjust(p.unadj[params==0], method="BH", n=nu))
+		p.truealts = min(p.adjust(p.unadj[params!=0], method="BH", n=nu))
 		names(p.truenull) <- paste(names(p.unadj)[params==0], collapse=" | ")
+		names(p.truealts) <- paste(names(p.unadj)[params!=0], collapse=" | ")
 	}
 	p.headline = min(p.adjust(p.unadj, method="BH", n=nu))
 	names(p.headline) <- paste(names(p.unadj), collapse=" | ")
@@ -435,6 +469,7 @@ calc.BH = function(p.unadj, nu, params=NULL) {
 		marginal.neglog10padj = -log10(p.adjust(p.unadj, method="BH", n=nu)),
 		pairwise.neglog10padj = -log10(p.pair),
 		truenull.neglog10padj = -log10(p.truenull),
+		truealts.neglog10padj = -log10(p.truealts),
 		headline.neglog10padj = -log10(p.headline)
 	)
 }
@@ -476,7 +511,9 @@ calc.HMP = function(p.unadj, nu, min.p.unadj=1e-308, params=NULL) {
 		stopifnot(length(params)==length(p.unadj))
 		stopifnot(all(!is.na(params)))
 	}
+	nms = names(p.unadj)
 	p.unadj = pmax(min.p.unadj, p.unadj)
+	names(p.unadj) <- nms
 	p.adj = sapply(p.unadj, Vectorize(function(p) p.hmp.robust(c(p, rep(1, nu-1)), L=nu)))
 	names(p.adj) <- names(p.unadj)
 	p.pair = outer(p.unadj, p.unadj, Vectorize(function(x, y) p.hmp.robust(c(x, y, rep(1, nu-2)), L=nu)))
@@ -484,9 +521,12 @@ calc.HMP = function(p.unadj, nu, min.p.unadj=1e-308, params=NULL) {
 	p.pair = p.pair[lower.tri(p.pair)]
 	names(p.pair) <- names.pair[lower.tri(names.pair)]
 	p.truenull = as.double(NA)
+	p.truealts = as.double(NA)
 	if(!is.null(params)) {
-		p.truenull = p.hmp.robust(c(p.unadj[params==0], rep(1, sum(params!=0))), L=nu)
+		p.truenull = p.hmp.robust(c(p.unadj[params==0], rep(1, nu-sum(params==0))), L=nu)
+		p.truealts = p.hmp.robust(c(p.unadj[params!=0], rep(1, nu-sum(params!=0))), L=nu)
 		names(p.truenull) <- paste(names(p.unadj)[params==0], collapse=" | ")
+		names(p.truealts) <- paste(names(p.unadj)[params!=0], collapse=" | ")
 	}
 	p.headline = p.hmp.robust(c(p.unadj, rep(1, nu-length(p.unadj))), L=nu)
 	names(p.headline) <- paste(names(p.unadj), collapse=" | ")
@@ -495,6 +535,7 @@ calc.HMP = function(p.unadj, nu, min.p.unadj=1e-308, params=NULL) {
 		marginal.neglog10padj = -log10(p.adj),
 		pairwise.neglog10padj = -log10(p.pair),
 		truenull.neglog10padj = -log10(p.truenull),
+		truealts.neglog10padj = -log10(p.truealts),
 		headline.neglog10padj = -log10(p.headline)
 	)
 	return(ret)
@@ -533,9 +574,12 @@ calc.Simes = function(p.unadj, nu, params=NULL) {
 	p.pair = p.pair[lower.tri(p.pair)]
 	names(p.pair) <- names.pair[lower.tri(names.pair)]
 	p.truenull = as.double(NA)
+	p.truealts = as.double(NA)
 	if(!is.null(params)) {
 		p.truenull = p.Simes(c(p.unadj[params==0], rep(1, sum(params!=0))), L=nu)
+		p.truealts = p.Simes(c(p.unadj[params!=0], rep(1, sum(params0=0))), L=nu)
 		names(p.truenull) <- paste(names(p.unadj)[params==0], collapse=" | ")
+		names(p.truealts) <- paste(names(p.unadj)[params!=0], collapse=" | ")
 	}
 	p.headline = p.Simes(p.unadj, L=nu)
 	names(p.headline) <- paste(names(p.unadj), collapse=" | ")
@@ -544,6 +588,7 @@ calc.Simes = function(p.unadj, nu, params=NULL) {
 		marginal.neglog10padj = -log10(p.unadj*nu),
 		pairwise.neglog10padj = -log10(p.pair),
 		truenull.neglog10padj = -log10(p.truenull),
+		truealts.neglog10padj = -log10(p.truealts),
 		headline.neglog10padj = -log10(p.headline)
 	)
 	return(ret)
@@ -565,9 +610,12 @@ calc.Hommel = function(p.unadj, nu, params=NULL) {
 	p.pair = p.pair[lower.tri(p.pair)]
 	names(p.pair) <- names.pair[lower.tri(names.pair)]
 	p.truenull = as.double(NA)
+	p.truealts = as.double(NA)
 	if(!is.null(params)) {
 		p.truenull = min(p.adj[params==0])
+		p.truealts = min(p.adj[params!=0])
 		names(p.truenull) <- paste(names(p.unadj)[params==0], collapse=" | ")
+		names(p.truealts) <- paste(names(p.unadj)[params!=0], collapse=" | ")
 	}
 	p.headline = min(p.adj)
 	names(p.headline) <- paste(names(p.unadj), collapse=" | ")
@@ -576,6 +624,7 @@ calc.Hommel = function(p.unadj, nu, params=NULL) {
 		marginal.neglog10padj = -log10(p.adj),
 		pairwise.neglog10padj = -log10(p.pair),
 		truenull.neglog10padj = -log10(p.truenull),
+		truealts.neglog10padj = -log10(p.truealts),
 		headline.neglog10padj = -log10(p.headline)
 	)
 	return(ret)
@@ -587,10 +636,41 @@ p.Cauchy = function(p, w=rep(1/length(p), length(p))) {
   0.5 - atan(t0)/pi
 }
 # Cauchy combination test; Liu and Xie (2020)
+# Implemented as a local test with weighted Bonferroni correction
+# This is ok for the headline test, but not a valid shortcut CTP
+calc.Cauchy = function(p.unadj, nu, params=NULL) {
+	stopifnot(nu>=length(p.unadj))
+	p.adj = p.adjust(p.unadj, method="bonferroni", n=nu)
+	names(p.adj) <- paste("Not a CTP:", names(p.unadj))
+	p.pair = outer(p.unadj, p.unadj, Vectorize(function(x, y) p.Cauchy(c(x, y)) * nu/2))
+	names.pair = outer(names(p.unadj), names(p.unadj), Vectorize(function(x, y) paste(x, y, sep=" | ")))
+	p.pair = p.pair[lower.tri(p.pair)]
+	names(p.pair) <- paste("Not a CTP:", names.pair[lower.tri(names.pair)])
+	p.truenull = as.double(NA)
+	p.truealts = as.double(NA)
+	if(!is.null(params)) {
+		p.truenull = p.Cauchy(p.unadj[params==0]) * nu/length(p.unadj[params==0])
+		p.truealts = p.Cauchy(p.unadj[params!=0]) * nu/length(p.unadj[params!=0])
+		names(p.truenull) <- paste("Not a CTP:", paste(names(p.unadj)[params==0], collapse=" | "))
+		names(p.truealts) <- paste("Not a CTP:", paste(names(p.unadj)[params!=0], collapse=" | "))
+	}
+	p.headline = p.Cauchy(p.unadj) * nu/length(p.unadj)
+	names(p.headline) <- paste("Not a CTP:", paste(names(p.unadj), collapse=" | "))
+	ret = new("bmsim_pvalueTests",
+		method = "Cauchy combination test; Liu and Xie 2020",
+		marginal.neglog10padj = -log10(p.adj),
+		pairwise.neglog10padj = -log10(p.pair),
+		truenull.neglog10padj = -log10(p.truenull),
+		truealts.neglog10padj = -log10(p.truealts),
+		headline.neglog10padj = -log10(p.headline)
+	)
+	return(ret)
+}
+# Cauchy combination test; Liu and Xie (2020)
 # Implemented as an expectation over excluded values: assuming they are less significant than
 # the included values and follow a truncated uniform(0,1) distribution.
 # Otherwise by forcing them to be 1, the combined p-value would be forced to be 0 or 1.
-calc.Cauchy = function(p.unadj, nu, nsim=10000) {
+calc.Cauchy.simulate = function(p.unadj, nu, nsim=10000, params=NULL) {
 	stopifnot(nu>=length(p.unadj))
 	p.max = pmin(1, max(p.unadj))
 	headline = mean(replicate(nsim, {p.Cauchy(c(p.unadj, runif(nu-length(p.unadj), p.max, 1)))}))
@@ -599,6 +679,7 @@ calc.Cauchy = function(p.unadj, nu, nsim=10000) {
 		marginal.neglog10padj = double(0),
 		pairwise.neglog10padj = double(0),
 		truenull.neglog10padj = double(0),
+		truealts.neglog10padj = double(0),
 		headline.neglog10padj = -log10(headline)
 	)
 	names(ret@headline.neglog10padj) <- paste(names(p.unadj), collapse=" | ")
@@ -677,9 +758,12 @@ calc.evalue = function(p.unadj, nu, kappa=0.1, params=NULL) {
 	p.pair = p.pair[lower.tri(p.pair)]
 	names(p.pair) <- names.pair[lower.tri(names.pair)]
 	p.truenull = as.double(NA)
+	p.truealts = as.double(NA)
 	if(!is.null(params)) {
 		p.truenull = p.evalue(p.unadj[params==0], L=nu, kappa=kappa)
+		p.truealts = p.evalue(p.unadj[params!=0], L=nu, kappa=kappa)
 		names(p.truenull) <- paste(names(p.unadj)[params==0], collapse=" | ")
+		names(p.truealts) <- paste(names(p.unadj)[params!=0], collapse=" | ")
 	}
 	p.headline = p.evalue(c(p.unadj, rep(1, nu-length(p.unadj))), L=nu, kappa=kappa)
 	names(p.headline) <- paste(names(p.unadj), collapse=" | ")
@@ -688,6 +772,7 @@ calc.evalue = function(p.unadj, nu, kappa=0.1, params=NULL) {
 		marginal.neglog10padj = -log10(p.adj),
 		pairwise.neglog10padj = -log10(p.pair),
 		truenull.neglog10padj = -log10(p.truenull),
+		truealts.neglog10padj = -log10(p.truealts),
 		headline.neglog10padj = -log10(p.headline)
 	)
 	return(ret)
@@ -695,12 +780,13 @@ calc.evalue = function(p.unadj, nu, kappa=0.1, params=NULL) {
 
 # Multilevel procedure to convert BFs to p-values
 # Warning: Multiple testing correction not applied
-calc.evalue.BF2p = function(marginal.log10bf, pairwise.log10bf, truenull.log10bf, headline.log10bf, nu=length(marginal.log10bf)) {
+calc.evalue.BF2p = function(marginal.log10bf, pairwise.log10bf, truenull.log10bf, truealts.log10bf, headline.log10bf, nu=length(marginal.log10bf)) {
 	ret = new("bmsim_pvalueTests",
 		method = "An E-value conversion of BFs to p-values; based on Vovk and Wang 2021",
 		marginal.neglog10padj = -marginal.log10bf,
 		pairwise.neglog10padj = -pairwise.log10bf,
 		truenull.neglog10padj = -truenull.log10bf,
+		truealts.neglog10padj = -truealts.log10bf,
 		headline.neglog10padj = -headline.log10bf
 	)
 	return(ret)
@@ -889,7 +975,7 @@ mr.bma.x = function(data, sigma=0.5, prior_prob=0.1, nsim=10, nu=data@m) {
 		signif.neglog10padj = -log10(nu * pval),
 		signif.log10po = pp2log10po(mr.output@pp_marginal),
 		pvalueTests = list(
-			"Evalue.BF2p" = calc.evalue.BF2p(pp2log10po(mr.output@pp_marginal) - log10(prior_prob/(1-prior_prob)), NA, NA, NA, nu)
+			"Evalue.BF2p" = calc.evalue.BF2p(pp2log10po(mr.output@pp_marginal) - log10(prior_prob/(1-prior_prob)), NA, NA, NA, NA, nu)
 		),
 		time.secs = as.double(difftime(Sys.time(), start_time, units="secs"))
 	)
@@ -974,7 +1060,7 @@ add1drop1 = function(data, binary.inclusion.vector, nu=data@m, print.ssq=FALSE, 
 		"HMP" = calc.HMP(pval, nu, params=params),
 		"Simes" = calc.Simes(pval, nu, params=params),
 		"Hommel" = calc.Hommel(pval, nu, params=params),
-		"Cauchy" = calc.Cauchy(pval, nu),
+		"Cauchy" = calc.Cauchy(pval, nu, params=params),
 		"Evalue" = calc.evalue(pval, nu, kappa=e.value.kappa, params=params)
 	)
 	validate(ret)
@@ -1080,6 +1166,24 @@ doublethink.x = function(data, h=1, mu=.1/(1-.1), nu=data@m, e.value.kappa=0.1, 
 			colnames(s.truenull.xor) <- paste(colnames(s)[wh], collapse=" ^ ")
 		}
 	}
+	# Model inclusion vector for set of true alternatives
+	s.truealts = matrix(as.logical(NA), nrow=nrow(s), ncol=1)
+	if(!is.null(params)) {
+		wh = which(params!=0)
+		if(length(wh)>0) {
+			s.truealts = matrix(rowSums(s[,wh,drop=FALSE])>0, nrow=nrow(s), ncol=1)
+			colnames(s.truealts) <- paste(colnames(s)[wh], collapse=" | ")
+		}
+	}
+	# Model inclusion vector for set of true alts: one degree of freedom tests
+	s.truealts.xor = matrix(as.logical(NA), nrow=nrow(s), ncol=1)
+	if(!is.null(params)) {
+		wh = which(params!=0)
+		if(length(wh)>0) {
+			s.truealts.xor = matrix(rowSums(s[,wh,drop=FALSE])==1, nrow=nrow(s), ncol=1)
+			colnames(s.truealts.xor) <- paste(colnames(s)[wh], collapse=" ^ ")
+		}
+	}
 	# Compute the return objects: model-averaged results
 	doublethink.bma = list()
 	doublethink.bma.preciser = list()
@@ -1088,17 +1192,20 @@ doublethink.x = function(data, h=1, mu=.1/(1-.1), nu=data@m, e.value.kappa=0.1, 
 		PO.marginal = colSums(PP[,j]*s)/colSums(PP[,j]*(1-s))
 		PO.pairwise = colSums(PP[,j]*s.pairwise)/colSums(PP[,j]*(1-s.pairwise))
 		PO.truenull = colSums(PP[,j]*s.truenull)/colSums(PP[,j]*(1-s.truenull))
+		PO.truealts = colSums(PP[,j]*s.truealts)/colSums(PP[,j]*(1-s.truealts))
 		PO.headline = sum(PP[-1,j])/PP[1,j]
 		names(PO.headline) <- paste(colnames(s), collapse = " | ")
 		# One degree of freedom tests
 		PO.pairwise.1df = colSums(PP[,j]*s.pairwise.xor)/colSums(PP[,j]*(1-s.pairwise)) # Note xor in numerator; or in the denominator
 		PO.truenull.1df = colSums(PP[,j]*s.truenull.xor)/colSums(PP[,j]*(1-s.truenull)) # Note xor in numerator; or in the denominator
+		PO.truealts.1df = colSums(PP[,j]*s.truealts.xor)/colSums(PP[,j]*(1-s.truealts)) # Note xor in numerator; or in the denominator
 		PO.headline.1df = sum(PP[,j]*(degfree==1))/PP[1,j]
 		names(PO.headline.1df) <- paste(colnames(s), collapse = " ^ ")
 		# Closed testing procedure p-values under Theorem 2
 		p.adj.marginal = pchisq(2*log(PO.marginal/nu/mu[j]/sqrt(xi[j])), 1, low=FALSE); p.adj.marginal[p.adj.marginal>0.02] = 1
 		p.adj.pairwise = pchisq(2*log(PO.pairwise/nu/mu[j]/sqrt(xi[j])), 1, low=FALSE); p.adj.pairwise[p.adj.pairwise>0.02] = 1
 		p.adj.truenull = pchisq(2*log(PO.truenull/nu/mu[j]/sqrt(xi[j])), 1, low=FALSE); p.adj.truenull[p.adj.truenull>0.02] = 1
+		p.adj.truealts = pchisq(2*log(PO.truealts/nu/mu[j]/sqrt(xi[j])), 1, low=FALSE); p.adj.truealts[p.adj.truealts>0.02] = 1
 		p.adj.headline = pchisq(2*log(PO.headline/nu/mu[j]/sqrt(xi[j])), 1, low=FALSE); p.adj.headline[p.adj.headline>0.02] = 1
 		# Unadjusted p-values under Theorem 1
 		p.unadj.marginal = pchisq(2*log(PO.marginal/mu[j]/sqrt(xi[j])), 1, low=FALSE); p.unadj.marginal[p.unadj.marginal>0.02] = 1
@@ -1117,6 +1224,8 @@ doublethink.x = function(data, h=1, mu=.1/(1-.1), nu=data@m, e.value.kappa=0.1, 
 				 pairwise.signif.log10po = log10(PO.pairwise),
 				 truenull.signif.neglog10padj = -log10(p.adj.truenull),
 				 truenull.signif.log10po = log10(PO.truenull),
+				 truealts.signif.neglog10padj = -log10(p.adj.truealts),
+				 truealts.signif.log10po = log10(PO.truealts),
 				 headline.signif.neglog10padj = -log10(p.adj.headline),
 				 headline.signif.log10po = log10(PO.headline),
 				 pvalueTests = list(
@@ -1125,15 +1234,16 @@ doublethink.x = function(data, h=1, mu=.1/(1-.1), nu=data@m, e.value.kappa=0.1, 
 					"HMP" = calc.HMP(p.unadj.marginal, nu, params=params),
 					"Simes" = calc.Simes(p.unadj.marginal, nu, params=params),
 					"Hommel" = calc.Hommel(p.unadj.marginal, nu, params=params),
-					"Cauchy" = calc.Cauchy(p.unadj.marginal, nu),
+					"Cauchy" = calc.Cauchy(p.unadj.marginal, nu, params=params),
 					"Evalue" = calc.evalue(p.unadj.marginal, nu, kappa=e.value.kappa, params=params),
-					"Evalue.BF2p" = calc.evalue.BF2p(log10(PO.marginal) - log10(mu[j]), log10(PO.pairwise) - log10(2*mu[j]), log10(PO.truenull) - log10(sum(params==0)*mu[j]), log10(PO.headline) - log10(nu*mu[j]), nu)
+					"Evalue.BF2p" = calc.evalue.BF2p(log10(PO.marginal) - log10(mu[j]), log10(PO.pairwise) - log10(2*mu[j]), log10(PO.truenull) - log10(sum(params==0)*mu[j]), log10(PO.truealts) - log10(sum(params!=0)*mu[j]), log10(PO.headline) - log10(nu*mu[j]), nu)
 				 ),
 				 time.secs = as.double(difftime(end_time, start_time, units="secs"))
 			)
 		# One degree of freedom tests only (breaks the CTP except asymptotically)
 		p.adj.pairwise.1df = pchisq(2*log(PO.pairwise.1df/nu/mu[j]/sqrt(xi[j])), 1, low=FALSE); p.adj.pairwise.1df[p.adj.pairwise.1df>0.02] = 1
 		p.adj.truenull.1df = pchisq(2*log(PO.truenull.1df/nu/mu[j]/sqrt(xi[j])), 1, low=FALSE); p.adj.truenull.1df[p.adj.truenull.1df>0.02] = 1
+		p.adj.truealts.1df = pchisq(2*log(PO.truealts.1df/nu/mu[j]/sqrt(xi[j])), 1, low=FALSE); p.adj.truealts.1df[p.adj.truealts.1df>0.02] = 1
 		p.adj.headline.1df = pchisq(2*log(PO.headline.1df/nu/mu[j]/sqrt(xi[j])), 1, low=FALSE); p.adj.headline.1df[p.adj.headline.1df>0.02] = 1
 		doublethink.bma.1df.preciser[[j]] =
 			new("bmsim_analysisResults",
@@ -1149,6 +1259,8 @@ doublethink.x = function(data, h=1, mu=.1/(1-.1), nu=data@m, e.value.kappa=0.1, 
 				 pairwise.signif.log10po = log10(PO.pairwise.1df),
 				 truenull.signif.neglog10padj = -log10(p.adj.truenull.1df),
 				 truenull.signif.log10po = log10(PO.truenull.1df),
+				 truealts.signif.neglog10padj = -log10(p.adj.truealts.1df),
+				 truealts.signif.log10po = log10(PO.truealts.1df),
 				 headline.signif.neglog10padj = -log10(p.adj.headline.1df),
 				 headline.signif.log10po = log10(PO.headline.1df),
 				 pvalueTests = list(
@@ -1157,9 +1269,9 @@ doublethink.x = function(data, h=1, mu=.1/(1-.1), nu=data@m, e.value.kappa=0.1, 
 					"HMP" = calc.HMP(p.unadj.marginal, nu, params=params),
 					"Simes" = calc.Simes(p.unadj.marginal, nu, params=params),
 					"Hommel" = calc.Hommel(p.unadj.marginal, nu, params=params),
-					"Cauchy" = calc.Cauchy(p.unadj.marginal, nu),
+					"Cauchy" = calc.Cauchy(p.unadj.marginal, nu, params=params),
 					"Evalue" = calc.evalue(p.unadj.marginal, nu, kappa=e.value.kappa, params=params),
-					"Evalue.BF2p" = calc.evalue.BF2p(log10(PO.marginal) - log10(mu[j]), log10(PO.pairwise.1df) - log10(2*mu[j]), log10(PO.truenull.1df) - log10(sum(params==0)*mu[j]), log10(PO.headline.1df) - log10(nu*mu[j]), nu)
+					"Evalue.BF2p" = calc.evalue.BF2p(log10(PO.marginal) - log10(mu[j]), log10(PO.pairwise.1df) - log10(2*mu[j]), log10(PO.truenull.1df) - log10(sum(params==0)*mu[j]), log10(PO.truealts.1df) - log10(sum(params!=0)*mu[j]), log10(PO.headline.1df) - log10(nu*mu[j]), nu)
 				 ),
 				 time.secs = as.double(difftime(end_time, start_time, units="secs"))
 			)		# Closed testing procedure p-values under Theorem 2
@@ -1168,6 +1280,7 @@ doublethink.x = function(data, h=1, mu=.1/(1-.1), nu=data@m, e.value.kappa=0.1, 
 		p.adj.marginal = pchisq(2*log(PO.marginal/denom), 1, low=FALSE); p.adj.marginal[p.adj.marginal>0.02] = 1
 		p.adj.pairwise = pchisq(2*log(PO.pairwise/denom), 1, low=FALSE); p.adj.pairwise[p.adj.pairwise>0.02] = 1
 		p.adj.truenull = pchisq(2*log(PO.truenull/denom), 1, low=FALSE); p.adj.truenull[p.adj.truenull>0.02] = 1
+		p.adj.truealts = pchisq(2*log(PO.truealts/denom), 1, low=FALSE); p.adj.truealts[p.adj.truealts>0.02] = 1
 		p.adj.headline = pchisq(2*log(PO.headline/denom), 1, low=FALSE); p.adj.headline[p.adj.headline>0.02] = 1
 		# Unadjusted p-values under Theorem 1
 		# No adjustment needed in the case that |V|=1
@@ -1187,6 +1300,8 @@ doublethink.x = function(data, h=1, mu=.1/(1-.1), nu=data@m, e.value.kappa=0.1, 
 				 pairwise.signif.log10po = log10(PO.pairwise),
 				 truenull.signif.neglog10padj = -log10(p.adj.truenull),
 				 truenull.signif.log10po = log10(PO.truenull),
+				 truealts.signif.neglog10padj = -log10(p.adj.truealts),
+				 truealts.signif.log10po = log10(PO.truealts),
 				 headline.signif.neglog10padj = -log10(p.adj.headline),
 				 headline.signif.log10po = log10(PO.headline),
 				 pvalueTests = list(
@@ -1195,9 +1310,9 @@ doublethink.x = function(data, h=1, mu=.1/(1-.1), nu=data@m, e.value.kappa=0.1, 
 					"HMP" = calc.HMP(p.unadj.marginal, nu, params=params),
 					"Simes" = calc.Simes(p.unadj.marginal, nu, params=params),
 					"Hommel" = calc.Hommel(p.unadj.marginal, nu, params=params),
-					"Cauchy" = calc.Cauchy(p.unadj.marginal, nu),
+					"Cauchy" = calc.Cauchy(p.unadj.marginal, nu, params=params),
 					"Evalue" = calc.evalue(p.unadj.marginal, nu, kappa=e.value.kappa, params=params),
-					"Evalue.BF2p" = calc.evalue.BF2p(log10(PO.marginal) - log10(mu[j]), log10(PO.pairwise) - log10(2*mu[j]), log10(PO.truenull) - log10(sum(params==0)*mu[j]), log10(PO.headline) - log10(nu*mu[j]), nu)
+					"Evalue.BF2p" = calc.evalue.BF2p(log10(PO.marginal) - log10(mu[j]), log10(PO.pairwise) - log10(2*mu[j]), log10(PO.truenull) - log10(sum(params==0)*mu[j]), log10(PO.truealts) - log10(sum(params!=0)*mu[j]), log10(PO.headline) - log10(nu*mu[j]), nu)
 				 ),
 				 time.secs = as.double(difftime(end_time, start_time, units="secs"))
 			)
@@ -1459,7 +1574,7 @@ combine.test.performance.iteratively = function(comb.perf=NULL, perf, iter, nite
 	return(comb.perf)
 }
 combine.pvalueTest.performance = function(performance.list, test.name, pvalueTest.name) {
-	# test.name is one of pvalueTests.marginal pvalueTests.pairwise pvalueTests.truenull pvalueTests.headline
+	# test.name is one of pvalueTests.marginal pvalueTests.pairwise pvalueTests.truenull pvalueTests.truealts pvalueTests.headline
 	nsim = length(performance.list)
 	ret = new("bmsim_test_performance")
 	if(length(slot(performance.list[[1]], test.name)[[pvalueTest.name]]@bias)>0) {
@@ -1488,7 +1603,7 @@ combine.pvalueTest.performance = function(performance.list, test.name, pvalueTes
 	return(ret)
 }
 combine.pvalueTest.performance.iteratively = function(comb.perf=NULL, perf, iter, niter, test.name, pvalueTest.name) {
-	# test.name is one of pvalueTests.marginal pvalueTests.pairwise pvalueTests.truenull pvalueTests.headline
+	# test.name is one of pvalueTests.marginal pvalueTests.pairwise pvalueTests.truenull pvalueTests.truealts pvalueTests.headline
 	stopifnot(is(perf, "bmsim_performance"))
 	if(is.null(comb.perf)) {
 		# On first iteration, create comb.perf from perf
@@ -1597,6 +1712,8 @@ combine.performance = function(performance.list) {
 	if(length(performance.list[[1]]@bayes.pairwise@bias)>0) ret@bayes.pairwise = combine.test.performance(performance.list, "bayes.pairwise")
 	if(length(performance.list[[1]]@freqt.truenull@bias)>0) ret@freqt.truenull = combine.test.performance(performance.list, "freqt.truenull")
 	if(length(performance.list[[1]]@bayes.truenull@bias)>0) ret@bayes.truenull = combine.test.performance(performance.list, "bayes.truenull")
+	if(length(performance.list[[1]]@freqt.truealts@bias)>0) ret@freqt.truealts = combine.test.performance(performance.list, "freqt.truealts")
+	if(length(performance.list[[1]]@bayes.truealts@bias)>0) ret@bayes.truealts = combine.test.performance(performance.list, "bayes.truealts")
 	if(length(performance.list[[1]]@freqt.headline@bias)>0) ret@freqt.headline = combine.test.performance(performance.list, "freqt.headline")
 	if(length(performance.list[[1]]@bayes.headline@bias)>0) ret@bayes.headline = combine.test.performance(performance.list, "bayes.headline")
 
@@ -1607,6 +1724,8 @@ combine.performance = function(performance.list) {
 	names(ret@pvalueTests.pairwise) <- names(performance.list[[1]]@pvalueTests.pairwise)
 	ret@pvalueTests.truenull = lapply(names(performance.list[[1]]@pvalueTests.truenull), function(pvalueTest.name) combine.pvalueTest.performance(performance.list, "pvalueTests.truenull", pvalueTest.name))
 	names(ret@pvalueTests.truenull) <- names(performance.list[[1]]@pvalueTests.truenull)
+	ret@pvalueTests.truealts = lapply(names(performance.list[[1]]@pvalueTests.truealts), function(pvalueTest.name) combine.pvalueTest.performance(performance.list, "pvalueTests.truealts", pvalueTest.name))
+	names(ret@pvalueTests.truealts) <- names(performance.list[[1]]@pvalueTests.truealts)
 	ret@pvalueTests.headline = lapply(names(performance.list[[1]]@pvalueTests.headline), function(pvalueTest.name) combine.pvalueTest.performance(performance.list, "pvalueTests.headline", pvalueTest.name))
 	names(ret@pvalueTests.headline) <- names(performance.list[[1]]@pvalueTests.headline)
 
@@ -1662,6 +1781,8 @@ combine.performance.iteratively = function(comb.perf=NULL, perf, iter, niter) {
 		if(length(comb.perf@bayes.pairwise@bias)>0) comb.perf@bayes.pairwise = combine.test.performance.iteratively(NULL, perf, iter, niter, "bayes.pairwise")
 		if(length(comb.perf@freqt.truenull@bias)>0) comb.perf@freqt.truenull = combine.test.performance.iteratively(NULL, perf, iter, niter, "freqt.truenull")
 		if(length(comb.perf@bayes.truenull@bias)>0) comb.perf@bayes.truenull = combine.test.performance.iteratively(NULL, perf, iter, niter, "bayes.truenull")
+		if(length(comb.perf@freqt.truealts@bias)>0) comb.perf@freqt.truealts = combine.test.performance.iteratively(NULL, perf, iter, niter, "freqt.truealts")
+		if(length(comb.perf@bayes.truealts@bias)>0) comb.perf@bayes.truealts = combine.test.performance.iteratively(NULL, perf, iter, niter, "bayes.truealts")
 		if(length(comb.perf@freqt.headline@bias)>0) comb.perf@freqt.headline = combine.test.performance.iteratively(NULL, perf, iter, niter, "freqt.headline")
 		if(length(comb.perf@bayes.headline@bias)>0) comb.perf@bayes.headline = combine.test.performance.iteratively(NULL, perf, iter, niter, "bayes.headline")
 
@@ -1672,6 +1793,8 @@ combine.performance.iteratively = function(comb.perf=NULL, perf, iter, niter) {
 		names(comb.perf@pvalueTests.pairwise) <- names(comb.perf@pvalueTests.pairwise)
 		comb.perf@pvalueTests.truenull = lapply(names(comb.perf@pvalueTests.truenull), function(pvalueTest.name) combine.pvalueTest.performance.iteratively(NULL, perf, iter, niter, "pvalueTests.truenull", pvalueTest.name))
 		names(comb.perf@pvalueTests.truenull) <- names(comb.perf@pvalueTests.truenull)
+		comb.perf@pvalueTests.truealts = lapply(names(comb.perf@pvalueTests.truealts), function(pvalueTest.name) combine.pvalueTest.performance.iteratively(NULL, perf, iter, niter, "pvalueTests.truealts", pvalueTest.name))
+		names(comb.perf@pvalueTests.truealts) <- names(comb.perf@pvalueTests.truealts)
 		comb.perf@pvalueTests.headline = lapply(names(comb.perf@pvalueTests.headline), function(pvalueTest.name) combine.pvalueTest.performance.iteratively(NULL, perf, iter, niter, "pvalueTests.headline", pvalueTest.name))
 		names(comb.perf@pvalueTests.headline) <- names(comb.perf@pvalueTests.headline)
 
@@ -1704,6 +1827,8 @@ combine.performance.iteratively = function(comb.perf=NULL, perf, iter, niter) {
 		if(length(comb.perf@bayes.pairwise@bias)>0) comb.perf@bayes.pairwise = combine.test.performance.iteratively(comb.perf@bayes.pairwise, perf, iter, niter, "bayes.pairwise")
 		if(length(comb.perf@freqt.truenull@bias)>0) comb.perf@freqt.truenull = combine.test.performance.iteratively(comb.perf@freqt.truenull, perf, iter, niter, "freqt.truenull")
 		if(length(comb.perf@bayes.truenull@bias)>0) comb.perf@bayes.truenull = combine.test.performance.iteratively(comb.perf@bayes.truenull, perf, iter, niter, "bayes.truenull")
+		if(length(comb.perf@freqt.truealts@bias)>0) comb.perf@freqt.truealts = combine.test.performance.iteratively(comb.perf@freqt.truealts, perf, iter, niter, "freqt.truealts")
+		if(length(comb.perf@bayes.truealts@bias)>0) comb.perf@bayes.truealts = combine.test.performance.iteratively(comb.perf@bayes.truealts, perf, iter, niter, "bayes.truealts")
 		if(length(comb.perf@freqt.headline@bias)>0) comb.perf@freqt.headline = combine.test.performance.iteratively(comb.perf@freqt.headline, perf, iter, niter, "freqt.headline")
 		if(length(comb.perf@bayes.headline@bias)>0) comb.perf@bayes.headline = combine.test.performance.iteratively(comb.perf@bayes.headline, perf, iter, niter, "bayes.headline")
 
@@ -1714,6 +1839,8 @@ combine.performance.iteratively = function(comb.perf=NULL, perf, iter, niter) {
 		names(comb.perf@pvalueTests.pairwise) <- names(comb.perf@pvalueTests.pairwise)
 		comb.perf@pvalueTests.truenull = lapply(names(comb.perf@pvalueTests.truenull), function(pvalueTest.name) combine.pvalueTest.performance.iteratively(comb.perf@pvalueTests.truenull[[pvalueTest.name]], perf, iter, niter, "pvalueTests.truenull", pvalueTest.name))
 		names(comb.perf@pvalueTests.truenull) <- names(comb.perf@pvalueTests.truenull)
+		comb.perf@pvalueTests.truealts = lapply(names(comb.perf@pvalueTests.truealts), function(pvalueTest.name) combine.pvalueTest.performance.iteratively(comb.perf@pvalueTests.truealts[[pvalueTest.name]], perf, iter, niter, "pvalueTests.truealts", pvalueTest.name))
+		names(comb.perf@pvalueTests.truealts) <- names(comb.perf@pvalueTests.truealts)
 		comb.perf@pvalueTests.headline = lapply(names(comb.perf@pvalueTests.headline), function(pvalueTest.name) combine.pvalueTest.performance.iteratively(comb.perf@pvalueTests.headline[[pvalueTest.name]], perf, iter, niter, "pvalueTests.headline", pvalueTest.name))
 		names(comb.perf@pvalueTests.headline) <- names(comb.perf@pvalueTests.headline)
 	}
