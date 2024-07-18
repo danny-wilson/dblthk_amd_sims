@@ -632,17 +632,30 @@ combined.evalues = function(log.evalues, K=length(log.evalues), simple=FALSE) {
 		# assuming the expectation of the BF is 1 or less under the null
 	} else {
 		# Implement Algorithm 1 of Vovk and Wang (2021)
+		# 1. Find a permutation pi such that the (log) evalues are ordered from low to high
 		pi = order(log.evalues, decreasing=FALSE)
+		# 2. Define the ordered (log) evalues
 		log.e.ordered = log.evalues[pi]
+		# 3-5. Compute cumulative sums of the ordered (unlogged) evalues
 		S = sapply(1:K, function(i) exp(logsum(log.e.ordered[1:i])))
+		# Storage for step 7
 		e.star = rep(as.double(NA), K)
+		# 6. Loop over k=1...K
 		for(k in 1:K) {
+			# 7. Initialize the kth ordered e^star (adjusted evalue)
 			e.star[pi][k] = exp(log.e.ordered)[k]
+			# 8. Loop of i=1...(k-1) (if k>1)
 			if(k>1) for(i in 1:(k-1)) {
+				# 9. Define e
 				e = (exp(log.e.ordered)[k]+S[i])/(i+1)
-				if(e < e.star[pi][k]) e.star[pi][k] = e
+				# 10. Test if e is less than the kth ordered e^star (adjusted evalue)
+				if(e < e.star[pi][k]) {
+					# 11. If so, update the kth ordered e^star (adjusted evalue)
+					e.star[pi][k] = e
+				}
 			}
 		}
+		# Return the adjusted e-values
 		evalue = e.star
 	}
 	# Apply the unique e to p calibrator
