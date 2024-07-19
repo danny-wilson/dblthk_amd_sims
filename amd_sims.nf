@@ -14,11 +14,11 @@ shell:
 
 process simulate_dry_run {
 input:
-	val taskid
+	val taskids
 output:
-	path("${taskid}.sim.data.RDS"), 	emit: sim_data
-	path("${taskid}.sim.anal.RDS"),		emit: sim_anal
-	path("${taskid}.sim.perf.RDS"), 	emit: sim_perf
+	path("${taskids}.sim.data.RDS"), 		emit: sim_data
+	path("${taskids}.sim.anal.RDS"),		emit: sim_anal
+	path("${taskids}.sim.perf.RDS"), 		emit: sim_perf
 shell:
 '''
 	#!/usr/bin/env Rscript
