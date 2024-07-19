@@ -12,14 +12,15 @@ shell:
 '''
 }
 
+// Task batching pattern https://nextflow-io.github.io/patterns/task-batching/
 process simulate {
 input:
-	val taskid
+	val taskids
 	path parameters_filename
 output:
-	path("${taskid}.sim.data.RDS"), 	emit: sim_data
-	path("${taskid}.sim.anal.RDS"),		emit: sim_anal
-	path("${taskid}.sim.perf.RDS"), 	emit: sim_perf
+	path("${taskids}.sim.data.RDS"), 		emit: sim_data
+	path("${taskids}.sim.anal.RDS"),		emit: sim_anal
+	path("${taskids}.sim.perf.RDS"), 		emit: sim_perf
 shell:
 '''
 	#!/usr/bin/env Rscript
@@ -34,26 +35,28 @@ shell:
 	setwd(wd)
 
 	# Read arguments
-	taskid = as.integer("!{taskid}")
+	taskids = as.integer(unlist(strsplit("!{taskids}", sep=" ")))
 	cat("simulate() read arguments:\n")
-	cat("taskid:                ", taskid, "\n")
-	stopifnot(!is.na(taskid))
-	stopifnot(taskid>0)
+	cat("taskids:               ", taskids, "\n")
+	stopifnot(length(taskids)>0)
+	stopifnot(!any(is.na(taskids)))
+	stopifnot(all(taskids>0))
+	stopifnot(length(unique(taskids))==length(taskids))
 	infile = as.character("!{parameters_filename}")
-	filename.sim_data = "!{taskid}.sim.data.RDS"
-	filename.sim_anal = "!{taskid}.sim.anal.RDS"
-	filename.sim_perf = "!{taskid}.sim.perf.RDS"
+	filenames.sim_data = paste0(taskids, ".sim.data.RDS")
+	filenames.sim_anal = paste0(taskids, ".sim.anal.RDS")
+	filenames.sim_perf = paste0(taskids, ".sim.perf.RDS")
 	cat("infile:                ", infile, "\n")
-	cat("filename.sim_data:     ", filename.sim_data, "\n")
-	cat("filename.sim_anal:     ", filename.sim_anal, "\n")
-	cat("filename.sim_perf:     ", filename.sim_perf, "\n")
+	cat("filenames.sim_data:    ", filenames.sim_data, "\n")
+	cat("filenames.sim_anal:    ", filenames.sim_anal, "\n")
+	cat("filenames.sim_perf:    ", filenames.sim_perf, "\n")
 
 	# Implied arguments
 	nsim = as.integer("!{params.ntasks}")
 	cat("nsim:                  ", nsim, "\n")
 	stopifnot(!is.na(nsim))
 	stopifnot(nsim>0)
-	stopifnot(nsim>=taskid)
+	stopifnot(all(nsim>=taskids))
 	n = as.numeric("!{params.n}")
 	cat("n:                     ", n, "\n")
 	stopifnot(!is.na(n))
@@ -80,8 +83,6 @@ shell:
 	stopifnot(nrow(all_params)==nsim)
 	stopifnot(ncol(all_params)==15)
 	stopifnot(!any(is.na(all_params)))
-	params = all_params[taskid,]
-	cat("params:              ", params, "\n\n")
 
 	# Load example AMD data
 	setwd("!{params.repoDir}")
@@ -99,22 +100,30 @@ shell:
 	# Simulate the independent variables based on the example AMBdata
 	simulate = gen.simulate(data, n, seed=NA, independence=simulate_independence)
 	
-	# Set seed again to unfix the dependent variables (y)
-	set.seed(taskid)
-	# Simulate the dependent variables
-	sim.data = simulate(n, params)
-	new.data = simulate(n, params)
-	
-	# Perform the standard set of analyses
-	sim.anal = do.analyses(sim.data, params, nu=sim.data@m, mr.bma.nsim=mr_bma_nsim)
+	for(subtask in 1:length(taskids)) {
+		taskid = taskids[subtask]
 
-	# Compute performance metrics for the analyses
-	sim.perf = calc.performance(sim.anal, params, freqt.alpha=alpha, bayes.tau=tau, newdata=new.data)
+		params = all_params[taskid,]
+		cat("Beginning taskid:    ", taskid, "\n\n")
+		cat("params:              ", params, "\n\n")
 
-	# Save files
-	saveRDS(sim.data, file=filename.sim_data)
-	saveRDS(sim.anal, file=filename.sim_anal)
-	saveRDS(sim.perf, file=filename.sim_perf)
+		# Set seed again to unfix the dependent variables (y)
+		set.seed(taskid)
+		# Simulate the dependent variables
+		sim.data = simulate(n, params)
+		new.data = simulate(n, params)
+		
+		# Perform the standard set of analyses
+		sim.anal = do.analyses(sim.data, params, nu=sim.data@m, mr.bma.nsim=mr_bma_nsim)
+
+		# Compute performance metrics for the analyses
+		sim.perf = calc.performance(sim.anal, params, freqt.alpha=alpha, bayes.tau=tau, newdata=new.data)
+
+		# Save files
+		saveRDS(sim.data, file=filenames.sim_data[subtask])
+		saveRDS(sim.anal, file=filenames.sim_anal[subtask])
+		saveRDS(sim.perf, file=filenames.sim_perf[subtask])
+	}
 	
 	cat("simulate: Doublethink AMD simulation completed successfully\n")
 '''
@@ -271,6 +280,7 @@ params.tau = 9
 params.simulate_independence = false
 params.repoDir = '/well/bag/wilson/GitHub/dblthk_amd_sims'
 params.combine_performance_mem = 14.0
+params.task_batch_size = 10
 
 // Print arguments
 // Default arguments can be overriden by specifying them in nextflow.config
@@ -290,9 +300,10 @@ println 'tau:                      ' + params.tau
 println 'simulate_independence:    ' + params.simulate_independence
 println 'repoDir:                  ' + params.repoDir
 println 'combine_performance_mem:  ' + params.combine_performance_mem
+println 'task_batch_size        :  ' + params.task_batch_size
 
 // Define the channels
-ch_taskid = Channel.of(1..params.ntasks)
+ch_taskid = Channel.of(1..params.ntasks) | buffer(size: params.task_batch_size, remainder: true)
 
 // Go
 workflow {
