@@ -324,75 +324,83 @@ setMethod("performance", "bmsim_analysisResults", function(obj, parameter, newda
 	})
 
 	# Hypothesis tests: pairwise
-	if(length(obj@pairwise.signif.neglog10padj)>0) {
-		param.signif = outer(param.signif, param.signif, FUN="|")
-		param.signif = 1*(param.signif[lower.tri(param.signif)])
+	param.signif = outer(param.signif, param.signif, FUN="|")
+	param.signif = 1*(param.signif[lower.tri(param.signif)])
 		
+	if(length(obj@pairwise.signif.neglog10padj)>0) {
 		pairwise.freqt.signif = 1*(obj@pairwise.signif.neglog10padj >= thresh.neglog10padj)
 		ret@freqt.pairwise = calc.test.performance(pairwise.freqt.signif, param.signif, names(obj@pairwise.signif.neglog10padj))
+	}
 
+	if(length(obj@pairwise.signif.log10po)>0) {
 		pairwise.bayes.signif = 1*(obj@pairwise.signif.log10po >= thresh.log10po)
 		ret@bayes.pairwise = calc.test.performance(pairwise.bayes.signif, param.signif, names(obj@pairwise.signif.log10po))
-		
-		ret@pvalueTests.pairwise = lapply(obj@pvalueTests, function(test) {
-			ret = new("bmsim_test_performance")
-			if(length(test@pairwise.neglog10padj)>0) ret = calc.test.performance(1*(test@pairwise.neglog10padj >= thresh.neglog10padj), param.signif, names(test@pairwise.neglog10padj))
-			return(ret)
-		})
 	}
+
+	ret@pvalueTests.pairwise = lapply(obj@pvalueTests, function(test) {
+		ret = new("bmsim_test_performance")
+		if(length(test@pairwise.neglog10padj)>0) ret = calc.test.performance(1*(test@pairwise.neglog10padj >= thresh.neglog10padj), param.signif, names(test@pairwise.neglog10padj))
+		return(ret)
+	})
 
 	# Hypothesis tests: truenull
+	# Scalar; members of the true null set are never truly significant
+	param.signif = 0
+
 	if(length(obj@truenull.signif.neglog10padj)>0) {
-		# Scalar; members of the true null set are never truly significant
-		param.signif = 0
-
 		truenull.freqt.signif = 1*(obj@truenull.signif.neglog10padj >= thresh.neglog10padj)
-		ret@freqt.truenull = calc.test.performance(truenull.freqt.signif, param.signif, names(obj@truenull.signif.neglog10padj))
-
-		truenull.bayes.signif = 1*(obj@truenull.signif.log10po >= thresh.log10po)
-		ret@bayes.truenull = calc.test.performance(truenull.bayes.signif, param.signif, names(obj@truenull.signif.log10po))
-		
-		ret@pvalueTests.truenull = lapply(obj@pvalueTests, function(test) {
-			ret = new("bmsim_test_performance")
-			if(length(test@truenull.neglog10padj)>0) ret = calc.test.performance(1*(test@truenull.neglog10padj >= thresh.neglog10padj), param.signif, names(test@truenull.neglog10padj))
-			return(ret)
-		})
+		ret@freqt.truenull = calc.test.performance(truenull.freqt.signif, rep(param.signif, length(truenull.freqt.signif)), names(obj@truenull.signif.neglog10padj))
 	}
+	
+	if(length(obj@truenull.signif.log10po)>0) {
+		truenull.bayes.signif = 1*(obj@truenull.signif.log10po >= thresh.log10po)
+		ret@bayes.truenull = calc.test.performance(truenull.bayes.signif, rep(param.signif, length(truenull.bayes.signif)), names(obj@truenull.signif.log10po))
+	}
+		
+	ret@pvalueTests.truenull = lapply(obj@pvalueTests, function(test) {
+		ret = new("bmsim_test_performance")
+		if(length(test@truenull.neglog10padj)>0) ret = calc.test.performance(1*(test@truenull.neglog10padj >= thresh.neglog10padj), rep(param.signif, length(test@truenull.neglog10padj)), names(test@truenull.neglog10padj))
+		return(ret)
+	})
 
 	# Hypothesis tests: truealts
+	# Scalar; members of the true alts set are always truly significant
+	param.signif = 1
+
 	if(length(obj@truealts.signif.neglog10padj)>0) {
-		# Scalar; members of the true alts set are always truly significant
-		param.signif = 1
-
 		truealts.freqt.signif = 1*(obj@truealts.signif.neglog10padj >= thresh.neglog10padj)
-		ret@freqt.truealts = calc.test.performance(truealts.freqt.signif, param.signif, names(obj@truealts.signif.neglog10padj))
-
-		truealts.bayes.signif = 1*(obj@truealts.signif.log10po >= thresh.log10po)
-		ret@bayes.truealts = calc.test.performance(truealts.bayes.signif, param.signif, names(obj@truealts.signif.log10po))
-		
-		ret@pvalueTests.truealts = lapply(obj@pvalueTests, function(test) {
-			ret = new("bmsim_test_performance")
-			if(length(test@truealts.neglog10padj)>0) ret = calc.test.performance(1*(test@truealts.neglog10padj >= thresh.neglog10padj), param.signif, names(test@truealts.neglog10padj))
-			return(ret)
-		})
+		ret@freqt.truealts = calc.test.performance(truealts.freqt.signif, rep(param.signif, length(truealts.freqt.signif)), names(obj@truealts.signif.neglog10padj))
 	}
+	
+	if(length(obj@truealts.signif.log10po)>0) {
+		truealts.bayes.signif = 1*(obj@truealts.signif.log10po >= thresh.log10po)
+		ret@bayes.truealts = calc.test.performance(truealts.bayes.signif, rep(param.signif, length(truealts.bayes.signif)), names(obj@truealts.signif.log10po))
+	}
+
+	ret@pvalueTests.truealts = lapply(obj@pvalueTests, function(test) {
+		ret = new("bmsim_test_performance")
+		if(length(test@truealts.neglog10padj)>0) ret = calc.test.performance(1*(test@truealts.neglog10padj >= thresh.neglog10padj), rep(param.signif, length(test@truealts.neglog10padj)), names(test@truealts.neglog10padj))
+		return(ret)
+	})
 
 	# Hypothesis tests: headline
+	param.signif = 1*any(parameter!=0)
+
 	if(length(obj@headline.signif.neglog10padj)>0) {
-		param.signif = 1*any(parameter!=0)
-		
 		headline.freqt.signif = 1*(obj@headline.signif.neglog10padj >= thresh.neglog10padj)
 		ret@freqt.headline = calc.test.performance(headline.freqt.signif, param.signif, names(obj@headline.signif.neglog10padj))
+	}
 
+	if(length(obj@headline.signif.log10po)>0) {
 		headline.bayes.signif = 1*(obj@headline.signif.log10po >= thresh.log10po)
 		ret@bayes.headline = calc.test.performance(headline.bayes.signif, param.signif, names(obj@headline.signif.log10po))
-		
-		ret@pvalueTests.headline = lapply(obj@pvalueTests, function(test) {
-			ret = new("bmsim_test_performance")
-			if(length(test@headline.neglog10padj)>0) ret = calc.test.performance(1*(test@headline.neglog10padj >= thresh.neglog10padj), param.signif, names(test@headline.neglog10padj))
-			return(ret)
-		})
 	}
+		
+	ret@pvalueTests.headline = lapply(obj@pvalueTests, function(test) {
+		ret = new("bmsim_test_performance")
+		if(length(test@headline.neglog10padj)>0) ret = calc.test.performance(1*(test@headline.neglog10padj >= thresh.neglog10padj), param.signif, names(test@headline.neglog10padj))
+		return(ret)
+	})
 
 	# Prediction
 	if(!is.null(newdata)) {
@@ -790,7 +798,9 @@ calc.evalue = function(p.unadj, nu, kappa=0.1, params=NULL) {
 }
 
 # Multilevel procedure to convert BFs to p-values
-# Warning: Multiple testing correction not applied
+# Warning: Multiple testing correction not applied automatically
+#          To achieve multiple testing correction, use the maximum prior odds to convert the posterior odds to Bayes factors before passing as arguments
+#          See OneNote 19/07/2024 'E values as a CTP'
 calc.evalue.BF2p = function(marginal.log10bf, pairwise.log10bf, truenull.log10bf, truealts.log10bf, headline.log10bf, nu=length(marginal.log10bf)) {
 	ret = new("bmsim_pvalueTests",
 		method = "An E-value conversion of BFs to p-values; based on Vovk and Wang 2021",
@@ -953,10 +963,18 @@ filter.correlated.data = function(full.data, m=as.integer(15), rsq.max.thresh = 
 }
 
 # Exhaustive MR-BMA analysis
-mr.bma.x = function(data, sigma=0.5, prior_prob=0.1, nsim=10, nu=data@m) {
+# Here params may be a matrix of columns that define the sets truenull and truealts depending if their values are zero or not
+mr.bma.x = function(data, sigma=0.5, prior_prob=0.1, nsim=10, nu=data@m, params=NULL) {
 	validate(data)
 	start_time = Sys.time()
-	
+	params.ncol = 0
+	if(!is.null(params)) {
+		params = as.matrix(params)
+		stopifnot(nrow(params)==data@m)
+		stopifnot(all(!is.na(params)))
+		params.ncol = ncol(params)
+	}
+
 	rs = as.character(1:data@n)
 	mr.input = new("mvMRInput", betaX = data@x, betaY = data@y, snps=rs, exposure=data@x.names, outcome = "y")
 	mr.output = summary_mvMR_BF(mr.input, sigma=sigma, prior_prob=prior_prob, calc.se=TRUE)
@@ -986,7 +1004,8 @@ mr.bma.x = function(data, sigma=0.5, prior_prob=0.1, nsim=10, nu=data@m) {
 		signif.neglog10padj = -log10(nu * pval),
 		signif.log10po = pp2log10po(mr.output@pp_marginal),
 		pvalueTests = list(
-			"Evalue.BF2p" = calc.evalue.BF2p(pp2log10po(mr.output@pp_marginal) - log10(prior_prob/(1-prior_prob)), NA, NA, NA, NA, nu)
+			# No point treating this as a CTP since only marginal POs computed. Instead adjust for the marginal prior odds only
+			"Evalue.BF2p" = calc.evalue.BF2p(pp2log10po(mr.output@pp_marginal) - log10(prior_prob/(1-prior_prob)), rep(NA, choose(data@m, 2)), rep(NA, params.ncol), rep(NA, params.ncol), NA, nu)
 		),
 		time.secs = as.double(difftime(Sys.time(), start_time, units="secs"))
 	)
@@ -1018,6 +1037,7 @@ mr.bma.x = function(data, sigma=0.5, prior_prob=0.1, nsim=10, nu=data@m) {
 }
 
 # Post model selection, fit a single model with all add1 and drop1 p-values
+# Here params may be a matrix of columns that define the sets truenull and truealts depending if their values are zero or not
 add1drop1 = function(data, binary.inclusion.vector, nu=data@m, print.ssq=FALSE, e.value.kappa=0.1, analysis.name="Leave one out/add one in significance testing", params=NULL) {
 	if(!is.null(params)) {
 		params = as.matrix(params)
@@ -1083,6 +1103,7 @@ add1drop1 = function(data, binary.inclusion.vector, nu=data@m, print.ssq=FALSE, 
 # h and mu can be vectors
 # By default, unit information prior (h=1) and 10% expected inclusion probability
 # By default, nu is the number of variables in the data, but can be set bigger
+# Here params may be a matrix of columns that define the sets truenull and truealts depending if their values are zero or not
 doublethink.x = function(data, h=1, mu=.1/(1-.1), nu=data@m, e.value.kappa=0.1, params=NULL) {
 	validate(data)
 	start_time = Sys.time()
@@ -1265,7 +1286,9 @@ doublethink.x = function(data, h=1, mu=.1/(1-.1), nu=data@m, e.value.kappa=0.1, 
 					"Hommel" = calc.Hommel(p.unadj.marginal, nu, params=params),
 					"Cauchy" = calc.Cauchy(p.unadj.marginal, nu, params=params),
 					"Evalue" = calc.evalue(p.unadj.marginal, nu, kappa=e.value.kappa, params=params),
-					"Evalue.BF2p" = calc.evalue.BF2p(log10(PO.marginal) - log10(mu[j]), log10(PO.pairwise) - log10(2*mu[j]), log10(PO.truenull) - log10(colSums(params==0)*mu[j]), log10(PO.truealts) - log10(colSums(params!=0)*mu[j]), log10(PO.headline) - log10(nu*mu[j]), nu)
+					# To achieve an e-value-based CTP, need to adjust for the worst case prior odds:
+					#"Evalue.BF2p" = calc.evalue.BF2p(log10(PO.marginal) - log10(mu[j]), log10(PO.pairwise) - log10(2*mu[j]), log10(PO.truenull) - log10(colSums(params==0)*mu[j]), log10(PO.truealts) - log10(colSums(params!=0)*mu[j]), log10(PO.headline) - log10(nu*mu[j]), nu)
+					"Evalue.BF2p" = calc.evalue.BF2p(log10(PO.marginal) - log10((((1+mu[j])^nu)-1)), log10(PO.pairwise) - log10((((1+mu[j])^nu)-1)), log10(PO.truenull) - log10((((1+mu[j])^nu)-1)), log10(PO.truealts) - log10((((1+mu[j])^nu)-1)), log10(PO.headline) - log10((((1+mu[j])^nu)-1)), nu)
 				 ),
 				 time.secs = as.double(difftime(end_time, start_time, units="secs"))
 			)
@@ -1300,7 +1323,9 @@ doublethink.x = function(data, h=1, mu=.1/(1-.1), nu=data@m, e.value.kappa=0.1, 
 					"Hommel" = calc.Hommel(p.unadj.marginal, nu, params=params),
 					"Cauchy" = calc.Cauchy(p.unadj.marginal, nu, params=params),
 					"Evalue" = calc.evalue(p.unadj.marginal, nu, kappa=e.value.kappa, params=params),
-					"Evalue.BF2p" = calc.evalue.BF2p(log10(PO.marginal) - log10(mu[j]), log10(PO.pairwise.1df) - log10(2*mu[j]), log10(PO.truenull.1df) - log10(colSums(params==0)*mu[j]), log10(PO.truealts.1df) - log10(colSums(params!=0)*mu[j]), log10(PO.headline.1df) - log10(nu*mu[j]), nu)
+					# To achieve an e-value-based CTP, need to adjust for the worst case prior odds:
+					#"Evalue.BF2p" = calc.evalue.BF2p(log10(PO.marginal) - log10(mu[j]), log10(PO.pairwise.1df) - log10(2*mu[j]), log10(PO.truenull.1df) - log10(colSums(params==0)*mu[j]), log10(PO.truealts.1df) - log10(colSums(params!=0)*mu[j]), log10(PO.headline.1df) - log10(nu*mu[j]), nu)
+					"Evalue.BF2p" = calc.evalue.BF2p(log10(PO.marginal) - log10((((1+mu[j])^nu)-1)), log10(PO.pairwise.1df) - log10((((1+mu[j])^nu)-1)), log10(PO.truenull.1df) - log10((((1+mu[j])^nu)-1)), log10(PO.truealts.1df) - log10((((1+mu[j])^nu)-1)), log10(PO.headline.1df) - log10((((1+mu[j])^nu)-1)), nu)
 				 ),
 				 time.secs = as.double(difftime(end_time, start_time, units="secs"))
 			)		# Closed testing procedure p-values under Theorem 2
@@ -1341,7 +1366,9 @@ doublethink.x = function(data, h=1, mu=.1/(1-.1), nu=data@m, e.value.kappa=0.1, 
 					"Hommel" = calc.Hommel(p.unadj.marginal, nu, params=params),
 					"Cauchy" = calc.Cauchy(p.unadj.marginal, nu, params=params),
 					"Evalue" = calc.evalue(p.unadj.marginal, nu, kappa=e.value.kappa, params=params),
-					"Evalue.BF2p" = calc.evalue.BF2p(log10(PO.marginal) - log10(mu[j]), log10(PO.pairwise) - log10(2*mu[j]), log10(PO.truenull) - log10(colSums(params==0)*mu[j]), log10(PO.truealts) - log10(colSums(params!=0)*mu[j]), log10(PO.headline) - log10(nu*mu[j]), nu)
+					# To achieve an e-value-based CTP, need to adjust for the worst case prior odds:
+					#"Evalue.BF2p" = calc.evalue.BF2p(log10(PO.marginal) - log10(mu[j]), log10(PO.pairwise) - log10(2*mu[j]), log10(PO.truenull) - log10(colSums(params==0)*mu[j]), log10(PO.truealts) - log10(colSums(params!=0)*mu[j]), log10(PO.headline) - log10(nu*mu[j]), nu)
+					"Evalue.BF2p" = calc.evalue.BF2p(log10(PO.marginal) - log10((((1+mu[j])^nu)-1)), log10(PO.pairwise) - log10((((1+mu[j])^nu)-1)), log10(PO.truenull) - log10((((1+mu[j])^nu)-1)), log10(PO.truealts) - log10((((1+mu[j])^nu)-1)), log10(PO.headline) - log10((((1+mu[j])^nu)-1)), nu)
 				 ),
 				 time.secs = as.double(difftime(end_time, start_time, units="secs"))
 			)
@@ -1889,6 +1916,7 @@ combine.performance.iteratively = function(comb.perf=NULL, perf, iter, niter) {
 	return(comb.perf)
 }
 # Perform a standardized set of analyses of a single dataset
+# Here params may be a matrix of columns that define the sets truenull and truealts depending if their values are zero or not
 do.analyses = function(data, params, nu=data@m, dblthk.h = c(0.25, 1, 4), dblthk.mu = c(0.05, 0.1, 0.2), mr.bma.nsim=1000, mr.bma.sigma=0.5, mr.bma.prior_prob=0.1, col.oracle.params=1) {
 	stopifnot(is(data, "bmsim_data"))
 	validate(data)
@@ -1937,7 +1965,7 @@ do.analyses = function(data, params, nu=data@m, dblthk.h = c(0.25, 1, 4), dblthk
 	}
 
 	# Perform Bayesian model-averaged Mendelian randomization using MR-BMA (no permutation procedure)
-	results.mr.bma = mr.bma.x(data, sigma=mr.bma.sigma, prior_prob=mr.bma.prior_prob, nsim=0, nu=nu)
+	results.mr.bma = mr.bma.x(data, sigma=mr.bma.sigma, prior_prob=mr.bma.prior_prob, nsim=0, nu=nu, params=params)
 	results[["mr-bma bma"]] = results.mr.bma$bma
 	# results[["mr-bma map"]] = results.mr.bma$map
 	# MR-BMA MAP-based model selection
@@ -1945,13 +1973,14 @@ do.analyses = function(data, params, nu=data@m, dblthk.h = c(0.25, 1, 4), dblthk
 
 	# Perform Bayesian model-averaged Mendelian randomization using MR-BMA (with permutation procedure)
 	# (Do this separately for timing purposes)
-	results.mr.bma = mr.bma.x(data, sigma=mr.bma.sigma, prior_prob=mr.bma.prior_prob, nsim=mr.bma.nsim, nu=nu)
+	results.mr.bma = mr.bma.x(data, sigma=mr.bma.sigma, prior_prob=mr.bma.prior_prob, nsim=mr.bma.nsim, nu=nu, params=params)
 	results[["mr-bma bma permute"]] = results.mr.bma$bma
 	
 	return(results)
 }
 
 # Perform a standardized set of analyses of a single dataset
+# Here params is a vector giving the true parameter values
 calc.performance = function(analyses, params, freqt.alpha = 0.05, bayes.tau = 19, newdata=NULL) {
 	stopifnot(is.list(analyses))
 	nanal = length(analyses)
