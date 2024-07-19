@@ -118,6 +118,7 @@ shell:
 		# Compute the truenull groups at different levels of fwer_rho
 		params.gp = matrix(((params!=0.0) %*% (data.rsq>=fwer_rho[1]))!=0.0, ncol=1)
 		if(length(fwer_rho)>1) for(j in 2:length(fwer_rho)) params.gp = cbind(params.gp, matrix(((params!=0.0) %*% (data.rsq>=fwer_rho[j]))!=0.0, ncol=1))
+		colnames(params.gp) <- paste0("fwer_", fwer_rho)
 
 		# Set seed again to unfix the dependent variables (y)
 		set.seed(taskid)
