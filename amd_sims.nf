@@ -35,8 +35,8 @@ shell:
 	setwd(wd)
 
 	# Read arguments
-	taskids.nopunc = gsub("[[:punct:]]", "", "!{taskids}")
-	taskids = as.integer(unlist(strsplit(taskids.nopunc, split=" ")))
+	char2vec = function(s) unlist(strsplit(gsub("[", "", gsub("]", "", s, fixed=TRUE), fixed=TRUE), ","))
+	taskids = as.integer(char2vec("!{taskids}"))
 	cat("simulate() read arguments:\n")
 	cat("taskids:               ", taskids, "\n")
 	stopifnot(length(taskids)>0)
@@ -67,16 +67,21 @@ shell:
 	stopifnot(!is.na(mr_bma_nsim))
 	stopifnot(mr_bma_nsim>=0)
 	alpha = as.double("!{params.alpha}")
+	cat("alpha:                 ", alpha, "\n")
 	stopifnot(!is.na(alpha))
 	stopifnot(alpha>0)
-	cat("alpha:                 ", alpha, "\n")
 	tau = as.double("!{params.tau}")
+	cat("tau:                   ", tau, "\n")
 	stopifnot(!is.na(tau))
 	stopifnot(tau>0)
-	cat("tau:                   ", tau, "\n")
 	simulate_independence = as.logical(toupper("!{params.simulate_independence}"))
-	stopifnot(!is.na(simulate_independence))
 	cat("simulate_independence: ", simulate_independence, "\n\n")
+	stopifnot(!is.na(simulate_independence))
+	fwer_rho = as.double(char2vec("!{params.fwer_rho}"))
+	cat("fwer_rho:              ", fwer_rho, "\n")
+	stopifnot(length(fwer_rho)>0)
+	stopifnot(all(fwer_rho>=0.0))
+	stopifnot(all(fwer_rho<=1.0))
 
 	# Read parameters
 	stopifnot(file.exists(infile))
@@ -96,6 +101,7 @@ shell:
 	# Filter example data to the 15 most significant risk factors based on univariable associations
 	# Now excluding variables highly correlated with two or more others
 	data = filter.correlated.data(full.data, m=as.integer(15), rsq.max.thresh = 0.66, results.univariable.MR=results.univariable.MR)
+	data.rsq = cor(data@x)^2
 
 	# Set seed to fix the independent variables (x)
 	set.seed(0)
@@ -109,6 +115,10 @@ shell:
 		cat("Beginning taskid:    ", taskid, "\n")
 		cat("params:              ", params, "\n\n")
 
+		# Compute the truenull groups at different levels of fwer_rho
+		params.gp = matrix(((params!=0.0) %*% (data.rsq>=fwer_rho[1]))!=0.0, ncol=1)
+		if(length(fwer_rho)>1) for(j in 2:length(fwer_rho)) params.gp = cbind(params.gp, matrix(((params!=0.0) %*% (data.rsq>=fwer_rho[j]))!=0.0, ncol=1))
+
 		# Set seed again to unfix the dependent variables (y)
 		set.seed(taskid)
 		# Simulate the dependent variables
@@ -116,7 +126,7 @@ shell:
 		new.data = simulate(n, params)
 		
 		# Perform the standard set of analyses
-		sim.anal = do.analyses(sim.data, params, nu=sim.data@m, mr.bma.nsim=mr_bma_nsim)
+		sim.anal = do.analyses(sim.data, params.gp, nu=sim.data@m, mr.bma.nsim=mr_bma_nsim)
 
 		# Compute performance metrics for the analyses
 		sim.perf = calc.performance(sim.anal, params, freqt.alpha=alpha, bayes.tau=tau, newdata=new.data)
@@ -260,7 +270,8 @@ shell:
 	results.univariable.MR = univariable.MR(full.data)
 
 	# Filter example data to the 15 most significant risk factors based on univariable associations
-	data = filter.data(full.data, as.integer(15), results.univariable.MR)
+	# Now excluding variables highly correlated with two or more others
+	data = filter.correlated.data(full.data, m=as.integer(15), rsq.max.thresh = 0.66, results.univariable.MR=results.univariable.MR)
 
 	# Simulate parameters and write to file
 	simulate.parameters(nsim=nsim, m=data@m, model=model, filename=filename.parameters, overwrite=FALSE, data=data, tau=tau, h=h, mu=mu, n=n, seed=seed)
@@ -283,6 +294,7 @@ params.simulate_independence = false
 params.repoDir = '/well/bag/wilson/GitHub/dblthk_amd_sims'
 params.combine_performance_mem = 14.0
 params.task_batch_size = 10
+params.fwer_rho = [0.00, 0.07, 0.10, 0.17, 0.25, 0.39, 0.43, 0.56, 0.59, 0.61, 0.63, 0.66, 0.83, 0.84, 1.00]
 
 // Print arguments
 // Default arguments can be overriden by specifying them in nextflow.config
@@ -302,7 +314,8 @@ println 'tau:                      ' + params.tau
 println 'simulate_independence:    ' + params.simulate_independence
 println 'repoDir:                  ' + params.repoDir
 println 'combine_performance_mem:  ' + params.combine_performance_mem
-println 'task_batch_size        :  ' + params.task_batch_size
+println 'task_batch_size:          ' + params.task_batch_size
+println 'fwer_rho:                 ' + params.fwer_rho
 
 // Define the channels
 ch_taskid = Channel.of(1..params.ntasks) | buffer(size: params.task_batch_size, remainder: true)
