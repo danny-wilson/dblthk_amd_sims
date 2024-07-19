@@ -418,6 +418,11 @@ setMethod("performance", "bmsim_analysisResults", function(obj, parameter, newda
 	return(ret)
 })
 
+# Define the minimum of no numbers to be NA, instead of Inf with a warning
+minRobust = function(x, na.rm=FALSE) ifelse(length(x)==0, NA, suppressWarnings(min(x, na.rm=na.rm)))
+# Define the maximum of no numbers to be NA, instead of -Inf with a warning
+maxRobust = function(x, na.rm=FALSE) ifelse(length(x)==0, NA, suppressWarnings(max(x, na.rm=na.rm)))
+
 # Methods to calculate pvalueTests
 calc.Bonferroni = function(p.unadj, nu, params=NULL) {
 	stopifnot(nu>=length(p.unadj))
@@ -435,8 +440,8 @@ calc.Bonferroni = function(p.unadj, nu, params=NULL) {
 	p.truenull = as.double(NA)
 	p.truealts = as.double(NA)
 	if(!is.null(params)) {
-		p.truenull = apply(params, 2, function(PARAMS) min(p.adj[PARAMS==0]))
-		p.truealts = apply(params, 2, function(PARAMS) min(p.adj[PARAMS!=0]))
+		p.truenull = apply(params, 2, function(PARAMS) minRobust(p.adj[PARAMS==0]))
+		p.truealts = apply(params, 2, function(PARAMS) minRobust(p.adj[PARAMS!=0]))
 		names(p.truenull) <- trimws(paste(colnames(params), apply(params, 2, function(PARAMS) paste(names(p.unadj)[PARAMS==0], collapse=" | "))))
 		names(p.truealts) <- trimws(paste(colnames(params), apply(params, 2, function(PARAMS) paste(names(p.unadj)[PARAMS!=0], collapse=" | "))))
 	}
@@ -467,8 +472,8 @@ calc.BH = function(p.unadj, nu, params=NULL) {
 	p.truenull = as.double(NA)
 	p.truealts = as.double(NA)
 	if(!is.null(params)) {
-		p.truenull = apply(params, 2, function(PARAMS) min(p.adjust(p.unadj[PARAMS==0], method="BH", n=nu)))
-		p.truealts = apply(params, 2, function(PARAMS) min(p.adjust(p.unadj[PARAMS!=0], method="BH", n=nu)))
+		p.truenull = apply(params, 2, function(PARAMS) minRobust(p.adjust(p.unadj[PARAMS==0], method="BH", n=nu)))
+		p.truealts = apply(params, 2, function(PARAMS) minRobust(p.adjust(p.unadj[PARAMS!=0], method="BH", n=nu)))
 		names(p.truenull) <- trimws(paste(colnames(params), apply(params, 2, function(PARAMS) paste(names(p.unadj)[PARAMS==0], collapse=" | "))))
 		names(p.truealts) <- trimws(paste(colnames(params), apply(params, 2, function(PARAMS) paste(names(p.unadj)[PARAMS!=0], collapse=" | "))))
 	}
@@ -706,7 +711,7 @@ calc.Cauchy.simulate = function(p.unadj, nu, nsim=10000, params=NULL) {
 
 # sum of logarithms function
 logsum = function(x,na.rm=FALSE) {
-	mx = max(x,na.rm=na.rm)
+	mx = maxRobust(x,na.rm=na.rm)
 	log(sum(exp(x-mx),na.rm=na.rm))+mx
 }
 # p-value to e-value
