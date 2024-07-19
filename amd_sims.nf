@@ -1,4 +1,4 @@
-process simulate_dry_run {
+process simulate_simple_dry_run {
 input:
 	val taskid
 	path parameters_filename
@@ -9,6 +9,70 @@ output:
 shell:
 '''
 	echo !{taskid} !{params} !{n}
+'''
+}
+
+process simulate_dry_run {
+input:
+	val taskid
+output:
+	path("${taskid}.sim.data.RDS"), 	emit: sim_data
+	path("${taskid}.sim.anal.RDS"),		emit: sim_anal
+	path("${taskid}.sim.perf.RDS"), 	emit: sim_perf
+shell:
+'''
+	#!/usr/bin/env Rscript
+
+	# Read arguments
+	char2vec = function(s) unlist(strsplit(gsub("[", "", gsub("]", "", s, fixed=TRUE), fixed=TRUE), ","))
+	taskids = as.integer(char2vec("!{taskids}"))
+	cat("simulate() read arguments:\n")
+	cat("taskids:               ", taskids, "\n")
+	stopifnot(length(taskids)>0)
+	stopifnot(!any(is.na(taskids)))
+	stopifnot(all(taskids>0))
+	stopifnot(length(unique(taskids))==length(taskids))
+	filenames.sim_data = paste0(taskids, ".sim.data.RDS")
+	filenames.sim_anal = paste0(taskids, ".sim.anal.RDS")
+	filenames.sim_perf = paste0(taskids, ".sim.perf.RDS")
+	cat("filenames.sim_data:    ", filenames.sim_data, "\n")
+	cat("filenames.sim_anal:    ", filenames.sim_anal, "\n")
+	cat("filenames.sim_perf:    ", filenames.sim_perf, "\n")
+
+	system2(paste("touch", paste(filenames.sim_data, collapse=" ")))
+	system2(paste("touch", paste(filenames.sim_anal, collapse=" ")))
+	system2(paste("touch", paste(filenames.sim_perf, collapse=" ")))
+'''
+}
+
+process combine_performance_dry_run {
+publishDir "${params.publishDir}", mode: "copy"
+input:
+	path(infiles)
+output:
+	path("combined.performance.RDS"), emit: combined_perf
+shell:
+'''
+	#!/usr/bin/env Rscript
+	
+	# Read arguments
+	infiles.all = "!{infiles}"
+	outfile = "combined.performance.RDS"
+	
+	# Check arguments
+	infiles = unlist(strsplit(infiles.all, ' '))
+	nfiles = length(infiles)
+	stopifnot(file.exists(infiles))
+	stopifnot(!file.exists(outfile))
+	cat("combine_performance: combining", nfiles, "files\n")
+
+	# Print arguments
+	cat("combine_performance() read arguments:\n")
+	cat("infiles:              ", infiles, "\n")
+	cat("outfile:              ", outfile, "\n")
+	cat("\n")
+
+	system2(paste("touch", outfile, collapse=" "))
 '''
 }
 
@@ -322,13 +386,22 @@ println 'fwer_rho:                 ' + params.fwer_rho
 ch_taskid = Channel.of(1..params.ntasks) | buffer(size: params.task_batch_size, remainder: true)
 
 // Go
+//workflow {
+//	// Simulate the parameters
+//	simulate_parameters()
+//
+//	// Perform the simulations
+//	simulate(ch_taskid, simulate_parameters.out.model_params)
+//
+//	// Combine performance metrics
+//	combine_performance(simulate.out.sim_perf.collect())
+//}
+
+// Dry run 2
 workflow {
-	// Simulate the parameters
-	simulate_parameters()
-	
 	// Perform the simulations
-	simulate(ch_taskid, simulate_parameters.out.model_params)
+	simulate_dry_run(ch_taskid)
 
 	// Combine performance metrics
-	combine_performance(simulate.out.sim_perf.collect())
+	combine_performance_dry_run(simulate_dry_run.out.sim_perf.collect())
 }
