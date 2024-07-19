@@ -39,9 +39,9 @@ shell:
 	cat("filenames.sim_anal:    ", filenames.sim_anal, "\n")
 	cat("filenames.sim_perf:    ", filenames.sim_perf, "\n")
 
-	system2(paste("touch", paste(filenames.sim_data, collapse=" ")))
-	system2(paste("touch", paste(filenames.sim_anal, collapse=" ")))
-	system2(paste("touch", paste(filenames.sim_perf, collapse=" ")))
+	system(paste("touch", paste(filenames.sim_data, collapse=" ")))
+	system(paste("touch", paste(filenames.sim_anal, collapse=" ")))
+	system(paste("touch", paste(filenames.sim_perf, collapse=" ")))
 '''
 }
 
@@ -72,7 +72,7 @@ shell:
 	cat("outfile:              ", outfile, "\n")
 	cat("\n")
 
-	system2(paste("touch", outfile, collapse=" "))
+	system(paste("touch", outfile, collapse=" "))
 '''
 }
 
