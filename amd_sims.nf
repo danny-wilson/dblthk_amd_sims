@@ -76,7 +76,7 @@ shell:
 	cat("tau:                   ", tau, "\n")
 	simulate_independence = as.logical(toupper("!{params.simulate_independence}"))
 	stopifnot(!is.na(simulate_independence))
-	cat("simulate_independence: ", simulate_independence, "\n")
+	cat("simulate_independence: ", simulate_independence, "\n\n")
 
 	# Read parameters
 	stopifnot(file.exists(infile))
@@ -94,7 +94,8 @@ shell:
 	results.univariable.MR = univariable.MR(full.data)
 
 	# Filter example data to the 15 most significant risk factors based on univariable associations
-	data = filter.data(full.data, as.integer(15), results.univariable.MR)
+	# Now excluding variables highly correlated with two or more others
+	data = filter.correlated.data(full.data, m=as.integer(15), rsq.max.thresh = 0.66, results.univariable.MR=results.univariable.MR)
 
 	# Set seed to fix the independent variables (x)
 	set.seed(0)
@@ -105,7 +106,7 @@ shell:
 		taskid = taskids[subtask]
 
 		params = all_params[taskid,]
-		cat("Beginning taskid:    ", taskid, "\n\n")
+		cat("Beginning taskid:    ", taskid, "\n")
 		cat("params:              ", params, "\n\n")
 
 		# Set seed again to unfix the dependent variables (y)
