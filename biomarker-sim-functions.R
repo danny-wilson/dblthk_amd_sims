@@ -630,8 +630,8 @@ calc.Hommel = function(p.unadj, nu, params=NULL) {
 	p.truenull = as.double(NA)
 	p.truealts = as.double(NA)
 	if(!is.null(params)) {
-		p.truenull = apply(params, 2, function(PARAMS) min(p.adj[PARAMS==0]))
-		p.truealts = apply(params, 2, function(PARAMS) min(p.adj[PARAMS!=0]))
+		p.truenull = apply(params, 2, function(PARAMS) minRobust(p.adj[PARAMS==0]))
+		p.truealts = apply(params, 2, function(PARAMS) minRobust(p.adj[PARAMS!=0]))
 		names(p.truenull) <- trimws(paste(colnames(params), apply(params, 2, function(PARAMS) paste(names(p.unadj)[PARAMS==0], collapse=" | "))))
 		names(p.truealts) <- trimws(paste(colnames(params), apply(params, 2, function(PARAMS) paste(names(p.unadj)[PARAMS!=0], collapse=" | "))))
 	}
