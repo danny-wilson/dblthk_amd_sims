@@ -35,7 +35,7 @@ shell:
 	setwd(wd)
 
 	# Read arguments
-	taskids = as.integer(unlist(strsplit("!{taskids}", sep=" ")))
+	taskids = as.integer(unlist(strsplit("!{taskids}", split=" ")))
 	cat("simulate() read arguments:\n")
 	cat("taskids:               ", taskids, "\n")
 	stopifnot(length(taskids)>0)
