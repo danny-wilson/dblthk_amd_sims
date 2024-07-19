@@ -82,9 +82,12 @@ input:
 	val taskids
 	path parameters_filename
 output:
-	path("${taskids}.sim.data.RDS"), 		emit: sim_data
-	path("${taskids}.sim.anal.RDS"),		emit: sim_anal
-	path("${taskids}.sim.perf.RDS"), 		emit: sim_perf
+//	path("${taskids}.sim.data.RDS"), 		emit: sim_data
+//	path("${taskids}.sim.anal.RDS"),		emit: sim_anal
+//	path("${taskids}.sim.perf.RDS"), 		emit: sim_perf
+	path("*.sim.data.RDS"), 				emit: sim_data
+	path("*.sim.anal.RDS"),					emit: sim_anal
+	path("*.sim.perf.RDS"), 				emit: sim_perf
 shell:
 '''
 	#!/usr/bin/env Rscript
@@ -386,22 +389,22 @@ println 'fwer_rho:                 ' + params.fwer_rho
 ch_taskid = Channel.of(1..params.ntasks) | buffer(size: params.task_batch_size, remainder: true)
 
 // Go
-//workflow {
-//	// Simulate the parameters
-//	simulate_parameters()
-//
-//	// Perform the simulations
-//	simulate(ch_taskid, simulate_parameters.out.model_params)
-//
-//	// Combine performance metrics
-//	combine_performance(simulate.out.sim_perf.collect())
-//}
-
-// Dry run 2
 workflow {
+	// Simulate the parameters
+	simulate_parameters()
+
 	// Perform the simulations
-	simulate_dry_run(ch_taskid)
+	simulate(ch_taskid, simulate_parameters.out.model_params)
 
 	// Combine performance metrics
-	combine_performance_dry_run(simulate_dry_run.out.sim_perf.collect())
+	combine_performance(simulate.out.sim_perf.collect())
 }
+
+// Dry run
+//workflow {
+//	// Perform the simulations
+//	simulate_dry_run(ch_taskid)
+//
+//	// Combine performance metrics
+//	combine_performance_dry_run(simulate_dry_run.out.sim_perf.collect())
+//}
