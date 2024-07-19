@@ -16,9 +16,9 @@ process simulate_dry_run {
 input:
 	val taskids
 output:
-	path("${taskids}.sim.data.RDS"), 		emit: sim_data
-	path("${taskids}.sim.anal.RDS"),		emit: sim_anal
-	path("${taskids}.sim.perf.RDS"), 		emit: sim_perf
+	path("*.sim.data.RDS"), 		emit: sim_data
+	path("*.sim.anal.RDS"),			emit: sim_anal
+	path("*.sim.perf.RDS"), 		emit: sim_perf
 shell:
 '''
 	#!/usr/bin/env Rscript
