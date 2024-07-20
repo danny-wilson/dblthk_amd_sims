@@ -149,6 +149,13 @@ shell:
 	stopifnot(length(fwer_rho)>0)
 	stopifnot(all(fwer_rho>=0.0))
 	stopifnot(all(fwer_rho<=1.0))
+	# If fwer_rho==1.0 is missing, add it (needed for oracle model)
+	if(!any(fwer_rho==1.0)) {
+		fwer_rho = c(fwer_rho, 1.0)
+		cat("fwer_rho:              ", fwer_rho, "(updated to include 1.0) \n")
+	}
+	col.fwer_rho_1 = which(fwer_rho==1.0)
+	stopifnot(length(col.fwer_rho_1)==1)
 
 	# Read parameters
 	stopifnot(file.exists(infile))
@@ -194,7 +201,7 @@ shell:
 		new.data = simulate(n, params)
 		
 		# Perform the standard set of analyses
-		sim.anal = do.analyses(sim.data, params.gp, nu=sim.data@m, mr.bma.nsim=mr_bma_nsim)
+		sim.anal = do.analyses(sim.data, params.gp, nu=sim.data@m, mr.bma.nsim=mr_bma_nsim, col.oracle.params=col.fwer_rho_1)
 
 		# Compute performance metrics for the analyses
 		sim.perf = calc.performance(sim.anal, params, freqt.alpha=alpha, bayes.tau=tau, newdata=new.data)
