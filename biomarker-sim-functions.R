@@ -1849,15 +1849,15 @@ combine.performance.iteratively = function(comb.perf=NULL, perf, iter, niter) {
 
 		# pvalue tests
 		comb.perf@pvalueTests.marginal = lapply(names(comb.perf@pvalueTests.marginal), function(pvalueTest.name) combine.pvalueTest.performance.iteratively(NULL, perf, iter, niter, "pvalueTests.marginal", pvalueTest.name))
-		names(comb.perf@pvalueTests.marginal) <- names(comb.perf@pvalueTests.marginal)
+		names(comb.perf@pvalueTests.marginal) <- names(perf@pvalueTests.marginal)
 		comb.perf@pvalueTests.pairwise = lapply(names(comb.perf@pvalueTests.pairwise), function(pvalueTest.name) combine.pvalueTest.performance.iteratively(NULL, perf, iter, niter, "pvalueTests.pairwise", pvalueTest.name))
-		names(comb.perf@pvalueTests.pairwise) <- names(comb.perf@pvalueTests.pairwise)
+		names(comb.perf@pvalueTests.pairwise) <- names(perf@pvalueTests.pairwise)
 		comb.perf@pvalueTests.truenull = lapply(names(comb.perf@pvalueTests.truenull), function(pvalueTest.name) combine.pvalueTest.performance.iteratively(NULL, perf, iter, niter, "pvalueTests.truenull", pvalueTest.name))
-		names(comb.perf@pvalueTests.truenull) <- names(comb.perf@pvalueTests.truenull)
+		names(comb.perf@pvalueTests.truenull) <- names(perf@pvalueTests.truenull)
 		comb.perf@pvalueTests.truealts = lapply(names(comb.perf@pvalueTests.truealts), function(pvalueTest.name) combine.pvalueTest.performance.iteratively(NULL, perf, iter, niter, "pvalueTests.truealts", pvalueTest.name))
-		names(comb.perf@pvalueTests.truealts) <- names(comb.perf@pvalueTests.truealts)
+		names(comb.perf@pvalueTests.truealts) <- names(perf@pvalueTests.truealts)
 		comb.perf@pvalueTests.headline = lapply(names(comb.perf@pvalueTests.headline), function(pvalueTest.name) combine.pvalueTest.performance.iteratively(NULL, perf, iter, niter, "pvalueTests.headline", pvalueTest.name))
-		names(comb.perf@pvalueTests.headline) <- names(comb.perf@pvalueTests.headline)
+		names(comb.perf@pvalueTests.headline) <- names(perf@pvalueTests.headline)
 
 	} else {
 		# Otherwise test for compatibility with perf
@@ -1894,16 +1894,21 @@ combine.performance.iteratively = function(comb.perf=NULL, perf, iter, niter) {
 		if(length(comb.perf@bayes.headline@bias)>0) comb.perf@bayes.headline = combine.test.performance.iteratively(comb.perf@bayes.headline, perf, iter, niter, "bayes.headline")
 
 		# pvalue tests
-		comb.perf@pvalueTests.marginal = lapply(names(comb.perf@pvalueTests.marginal), function(pvalueTest.name) combine.pvalueTest.performance.iteratively(comb.perf@pvalueTests.marginal[[pvalueTest.name]], perf, iter, niter, "pvalueTests.marginal", pvalueTest.name))
-		names(comb.perf@pvalueTests.marginal) <- names(comb.perf@pvalueTests.marginal)
-		comb.perf@pvalueTests.pairwise = lapply(names(comb.perf@pvalueTests.pairwise), function(pvalueTest.name) combine.pvalueTest.performance.iteratively(comb.perf@pvalueTests.pairwise[[pvalueTest.name]], perf, iter, niter, "pvalueTests.pairwise", pvalueTest.name))
-		names(comb.perf@pvalueTests.pairwise) <- names(comb.perf@pvalueTests.pairwise)
-		comb.perf@pvalueTests.truenull = lapply(names(comb.perf@pvalueTests.truenull), function(pvalueTest.name) combine.pvalueTest.performance.iteratively(comb.perf@pvalueTests.truenull[[pvalueTest.name]], perf, iter, niter, "pvalueTests.truenull", pvalueTest.name))
-		names(comb.perf@pvalueTests.truenull) <- names(comb.perf@pvalueTests.truenull)
-		comb.perf@pvalueTests.truealts = lapply(names(comb.perf@pvalueTests.truealts), function(pvalueTest.name) combine.pvalueTest.performance.iteratively(comb.perf@pvalueTests.truealts[[pvalueTest.name]], perf, iter, niter, "pvalueTests.truealts", pvalueTest.name))
-		names(comb.perf@pvalueTests.truealts) <- names(comb.perf@pvalueTests.truealts)
-		comb.perf@pvalueTests.headline = lapply(names(comb.perf@pvalueTests.headline), function(pvalueTest.name) combine.pvalueTest.performance.iteratively(comb.perf@pvalueTests.headline[[pvalueTest.name]], perf, iter, niter, "pvalueTests.headline", pvalueTest.name))
-		names(comb.perf@pvalueTests.headline) <- names(comb.perf@pvalueTests.headline)
+		nms = names(comb.perf@pvalueTests.marginal)
+		comb.perf@pvalueTests.marginal = lapply(nms, function(pvalueTest.name) combine.pvalueTest.performance.iteratively(comb.perf@pvalueTests.marginal[[pvalueTest.name]], perf, iter, niter, "pvalueTests.marginal", pvalueTest.name))
+		names(comb.perf@pvalueTests.marginal) <- nms
+		nms = names(comb.perf@pvalueTests.pairwise)
+		comb.perf@pvalueTests.pairwise = lapply(nms, function(pvalueTest.name) combine.pvalueTest.performance.iteratively(comb.perf@pvalueTests.pairwise[[pvalueTest.name]], perf, iter, niter, "pvalueTests.pairwise", pvalueTest.name))
+		names(comb.perf@pvalueTests.pairwise) <- nms
+		nms = names(comb.perf@pvalueTests.truenull)
+		comb.perf@pvalueTests.truenull = lapply(nms, function(pvalueTest.name) combine.pvalueTest.performance.iteratively(comb.perf@pvalueTests.truenull[[pvalueTest.name]], perf, iter, niter, "pvalueTests.truenull", pvalueTest.name))
+		names(comb.perf@pvalueTests.truenull) <- nms
+		nms = names(comb.perf@pvalueTests.truealts)
+		comb.perf@pvalueTests.truealts = lapply(nms, function(pvalueTest.name) combine.pvalueTest.performance.iteratively(comb.perf@pvalueTests.truealts[[pvalueTest.name]], perf, iter, niter, "pvalueTests.truealts", pvalueTest.name))
+		names(comb.perf@pvalueTests.truealts) <- nms
+		nms = names(comb.perf@pvalueTests.headline)
+		comb.perf@pvalueTests.headline = lapply(nms, function(pvalueTest.name) combine.pvalueTest.performance.iteratively(comb.perf@pvalueTests.headline[[pvalueTest.name]], perf, iter, niter, "pvalueTests.headline", pvalueTest.name))
+		names(comb.perf@pvalueTests.headline) <- nms
 	}
 	
 	if(iter==niter) {
