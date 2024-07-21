@@ -539,8 +539,8 @@ calc.HMP = function(p.unadj, nu, min.p.unadj=1e-308, params=NULL) {
 	p.truenull = as.double(NA)
 	p.truealts = as.double(NA)
 	if(!is.null(params)) {
-		p.truenull = apply(params, 2, function(PARAMS) p.hmp.robust(c(p.unadj[PARAMS==0], rep(1, nu-sum(PARAMS==0))), L=nu))
-		p.truealts = apply(params, 2, function(PARAMS) p.hmp.robust(c(p.unadj[PARAMS!=0], rep(1, nu-sum(PARAMS!=0))), L=nu))
+		p.truenull = apply(params, 2, function(PARAMS) ifelse(all(PARAMS!=0), NA, p.hmp.robust(c(p.unadj[PARAMS==0], rep(1, nu-sum(PARAMS==0))), L=nu)))
+		p.truealts = apply(params, 2, function(PARAMS) ifelse(all(PARAMS==0), NA, p.hmp.robust(c(p.unadj[PARAMS!=0], rep(1, nu-sum(PARAMS!=0))), L=nu)))
 		names(p.truenull) <- trimws(paste(colnames(params), apply(params, 2, function(PARAMS) paste(names(p.unadj)[PARAMS==0], collapse=" | "))))
 		names(p.truealts) <- trimws(paste(colnames(params), apply(params, 2, function(PARAMS) paste(names(p.unadj)[PARAMS!=0], collapse=" | "))))
 	}
@@ -593,8 +593,8 @@ calc.Simes = function(p.unadj, nu, params=NULL) {
 	p.truenull = as.double(NA)
 	p.truealts = as.double(NA)
 	if(!is.null(params)) {
-		p.truenull = apply(params, 2, function(PARAMS) p.Simes(c(p.unadj[PARAMS==0], rep(1, sum(PARAMS!=0))), L=nu))
-		p.truealts = apply(params, 2, function(PARAMS) p.Simes(c(p.unadj[PARAMS!=0], rep(1, sum(PARAMS==0))), L=nu))
+		p.truenull = apply(params, 2, function(PARAMS) ifelse(all(PARAMS!=0), NA, p.Simes(c(p.unadj[PARAMS==0], rep(1, sum(PARAMS!=0))), L=nu)))
+		p.truealts = apply(params, 2, function(PARAMS) ifelse(all(PARAMS==0), NA, p.Simes(c(p.unadj[PARAMS!=0], rep(1, sum(PARAMS==0))), L=nu)))
 		names(p.truenull) <- trimws(paste(colnames(params), apply(params, 2, function(PARAMS) paste(names(p.unadj)[PARAMS==0], collapse=" | "))))
 		names(p.truealts) <- trimws(paste(colnames(params), apply(params, 2, function(PARAMS) paste(names(p.unadj)[PARAMS!=0], collapse=" | "))))
 	}
