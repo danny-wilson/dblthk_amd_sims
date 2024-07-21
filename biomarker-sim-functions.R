@@ -1556,6 +1556,29 @@ combine.test.performance = function(performance.list, test.name) {
 }
 # Convert NAs to zeroes
 na20 = function(x) ifelse(is.na(x), 0, x)
+# Initialize a vector to store the numerator and denominator of a proportion: NAs do not count toward either
+prop.init = function(x) {
+	if(length(names(x))!=length(x)) names(x) <- 1:length(x)
+	y = c(na20(x), as.double(!is.na(x)))
+	names(y) <- c(names(x), paste0(names(x), ".denom"))
+	return(y)
+}
+# Update a vector's numerator and denominator: NAs do not count toward either. y is the current value, x is the value to add
+prop.update = function(y, x) {
+	stopifnot(length(y)==2*length(x))
+	z = y + c(na20(x), as.double(!is.na(x)))
+	names(z) <- names(y)
+	return(z)
+}
+# Finalize a proportion by dividing the numerator by the denominator
+prop.final = function(y) {
+	stopifnot(length(y) %% 2==0)
+	m = length(y)/2
+	z = y[1:m]/y[m+1:m]
+	names(z) <- names(y)[1:m]
+	return(z)
+}
+# Combine test performance iteratively
 combine.test.performance.iteratively = function(comb.perf=NULL, perf, iter, niter, test.name) {
 	stopifnot(is(perf, "bmsim_performance"))
 	if(is.null(comb.perf)) {
@@ -1564,31 +1587,23 @@ combine.test.performance.iteratively = function(comb.perf=NULL, perf, iter, nite
 		comb.perf = new("bmsim_test_performance")
 		if(length(slot(perf, test.name)@bias)>0) {
 			comb.perf = new("bmsim_test_performance",
-				bias = slot(perf, test.name)@bias/niter,
-				typeI = slot(perf, test.name)@typeI/niter,
-				typeII = slot(perf, test.name)@typeII/niter,
-				call = slot(perf, test.name)@call/niter,
-				# Variable denominator
-				familywiseI = c(na20(slot(perf, test.name)@familywiseI), as.double(!is.na(slot(perf, test.name)@familywiseI))),
-				# Variable denominator
-				familywiseII = c(na20(slot(perf, test.name)@familywiseII), as.double(!is.na(slot(perf, test.name)@familywiseII))),
-				# Variable denominator
-				pfdr = c(na20(slot(perf, test.name)@pfdr), as.double(!is.na(slot(perf, test.name)@pfdr))),
-				fdr = slot(perf, test.name)@fdr/niter,
-				fndr = slot(perf, test.name)@fndr/niter,
-				# Variable denominator
-				fpr = c(na20(slot(perf, test.name)@fpr), as.double(!is.na(slot(perf, test.name)@fpr))),
-				# Variable denominator
-				fnr = c(na20(slot(perf, test.name)@fnr), as.double(!is.na(slot(perf, test.name)@fnr))),
-				tp = slot(perf, test.name)@tp/niter,
-				fp = slot(perf, test.name)@fp/niter,
-				tn = slot(perf, test.name)@tn/niter,
-				fn = slot(perf, test.name)@fn/niter
+				# Create proportions with separate numerators and denominators for updating, not counting NAs
+				bias   = prop.init(slot(perf, test.name)@bias   ),
+				typeI  = prop.init(slot(perf, test.name)@typeI  ),
+				typeII = prop.init(slot(perf, test.name)@typeII ),
+				call   = prop.init(slot(perf, test.name)@call   ),
+				familywiseI  = prop.init(slot(perf, test.name)@familywiseI  ),
+				familywiseII = prop.init(slot(perf, test.name)@familywiseII ),
+				pfdr   = prop.init(slot(perf, test.name)@pfdr   ),
+				fdr    = prop.init(slot(perf, test.name)@fdr    ),
+				fndr   = prop.init(slot(perf, test.name)@fndr   ),
+				fpr    = prop.init(slot(perf, test.name)@fpr    ),
+				fnr    = prop.init(slot(perf, test.name)@fnr    ),
+				tp     = prop.init(slot(perf, test.name)@tp     ),
+				fp     = prop.init(slot(perf, test.name)@fp     ),
+				tn     = prop.init(slot(perf, test.name)@tn     ),
+				fn     = prop.init(slot(perf, test.name)@fn     )
 			)
-			names(comb.perf@bias) <- names(slot(perf, test.name)@bias)
-			names(comb.perf@typeI) <- names(slot(perf, test.name)@typeI)
-			names(comb.perf@typeII) <- names(slot(perf, test.name)@typeII)
-			names(comb.perf@call) <- names(slot(perf, test.name)@call)
 		}
 	} else {
 		# Otherwise update from perf
@@ -1596,39 +1611,40 @@ combine.test.performance.iteratively = function(comb.perf=NULL, perf, iter, nite
 		if(length(slot(perf, test.name)@bias)>0) {
 			stopifnot(is(comb.perf, "bmsim_test_performance"))
 
-			comb.perf@bias = comb.perf@bias + slot(perf, test.name)@bias/niter
-			comb.perf@typeI = comb.perf@typeI + slot(perf, test.name)@typeI/niter
-			comb.perf@typeII = comb.perf@typeII + slot(perf, test.name)@typeII/niter
-			comb.perf@call = comb.perf@call + slot(perf, test.name)@call/niter
-			# Variable denominator
-			comb.perf@familywiseI = comb.perf@familywiseI + c(na20(slot(perf, test.name)@familywiseI), as.double(!is.na(slot(perf, test.name)@familywiseI)))
-			# Variable denominator
-			comb.perf@familywiseII = comb.perf@familywiseII + c(na20(slot(perf, test.name)@familywiseII), as.double(!is.na(slot(perf, test.name)@familywiseII)))
-			# Variable denominator
-			comb.perf@pfdr = comb.perf@pfdr + c(na20(slot(perf, test.name)@pfdr), as.double(!is.na(slot(perf, test.name)@pfdr)))
-			comb.perf@fdr = comb.perf@fdr + slot(perf, test.name)@fdr/niter
-			comb.perf@fndr = comb.perf@fndr + slot(perf, test.name)@fndr/niter
-			# Variable denominator
-			comb.perf@fpr = comb.perf@fpr + c(na20(slot(perf, test.name)@fpr), as.double(!is.na(slot(perf, test.name)@fpr)))
-			# Variable denominator
-			comb.perf@fnr = comb.perf@fnr + c(na20(slot(perf, test.name)@fnr), as.double(!is.na(slot(perf, test.name)@fnr)))
-			comb.perf@tp = comb.perf@tp + slot(perf, test.name)@tp/niter
-			comb.perf@fp = comb.perf@fp + slot(perf, test.name)@fp/niter
-			comb.perf@tn = comb.perf@tn + slot(perf, test.name)@tn/niter
-			comb.perf@fn = comb.perf@fn + slot(perf, test.name)@fn/niter
+			# Update proportions with separate numerators and denominators for updating, not counting NAs
+			comb.perf@bias   = prop.update(comb.perf@bias   , slot(perf, test.name)@bias   )
+			comb.perf@typeI  = prop.update(comb.perf@typeI  , slot(perf, test.name)@typeI  )
+			comb.perf@typeII = prop.update(comb.perf@typeII , slot(perf, test.name)@typeII )
+			comb.perf@call   = prop.update(comb.perf@call   , slot(perf, test.name)@call   )
+			comb.perf@familywiseI  = prop.update(comb.perf@familywiseI  , slot(perf, test.name)@familywiseI  )
+			comb.perf@familywiseII = prop.update(comb.perf@familywiseII , slot(perf, test.name)@familywiseII )
+			comb.perf@pfdr   = prop.update(comb.perf@pfdr   , slot(perf, test.name)@pfdr   )
+			comb.perf@fdr    = prop.update(comb.perf@fdr    , slot(perf, test.name)@fdr    )
+			comb.perf@fndr   = prop.update(comb.perf@fndr   , slot(perf, test.name)@fndr   )
+			comb.perf@fpr    = prop.update(comb.perf@fpr    , slot(perf, test.name)@fpr    )
+			comb.perf@fnr    = prop.update(comb.perf@fnr    , slot(perf, test.name)@fnr    )
+			comb.perf@tp     = prop.update(comb.perf@tp     , slot(perf, test.name)@tp     )
+			comb.perf@fp     = prop.update(comb.perf@fp     , slot(perf, test.name)@fp     )
+			comb.perf@tn     = prop.update(comb.perf@tn     , slot(perf, test.name)@tn     )
+			comb.perf@fn     = prop.update(comb.perf@fn     , slot(perf, test.name)@fn     )
 
 			if(iter==niter) {
-				# Apply the denominators
-				m = length(comb.perf@familywiseI)/2
-				comb.perf@familywiseI = comb.perf@familywiseI[1:m]/comb.perf@familywiseI[m+1:m]
-				m = length(comb.perf@familywiseII)/2
-				comb.perf@familywiseII = comb.perf@familywiseII[1:m]/comb.perf@familywiseII[m+1:m]
-				m = length(comb.perf@pfdr)/2
-				comb.perf@pfdr = comb.perf@pfdr[1:m]/comb.perf@pfdr[m+1:m]
-				m = length(comb.perf@fpr)/2
-				comb.perf@fpr = comb.perf@fpr[1:m]/comb.perf@fpr[m+1:m]
-				m = length(comb.perf@fnr)/2
-				comb.perf@fnr = comb.perf@fpr[1:m]/comb.perf@fpr[m+1:m]
+				# Finalize proportions by dividing numerators by denominators
+				comb.perf@bias   = prop.final(comb.perf@bias   )
+				comb.perf@typeI  = prop.final(comb.perf@typeI  )
+				comb.perf@typeII = prop.final(comb.perf@typeII )
+				comb.perf@call   = prop.final(comb.perf@call   )
+				comb.perf@familywiseI  = prop.final(comb.perf@familywiseI  )
+				comb.perf@familywiseII = prop.final(comb.perf@familywiseII )
+				comb.perf@pfdr   = prop.final(comb.perf@pfdr   )
+				comb.perf@fdr    = prop.final(comb.perf@fdr    )
+				comb.perf@fndr   = prop.final(comb.perf@fndr   )
+				comb.perf@fpr    = prop.final(comb.perf@fpr    )
+				comb.perf@fnr    = prop.final(comb.perf@fnr    )
+				comb.perf@tp     = prop.final(comb.perf@tp     )
+				comb.perf@fp     = prop.final(comb.perf@fp     )
+				comb.perf@tn     = prop.final(comb.perf@tn     )
+				comb.perf@fn     = prop.final(comb.perf@fn     )
 			}
 		}
 	}
@@ -1672,31 +1688,23 @@ combine.pvalueTest.performance.iteratively = function(comb.perf=NULL, perf, iter
 		comb.perf = new("bmsim_test_performance")
 		if(length(slot(perf, test.name)[[pvalueTest.name]]@bias)>0) {
 			comb.perf = new("bmsim_test_performance",
-				bias = slot(perf, test.name)[[pvalueTest.name]]@bias/niter,
-				typeI = slot(perf, test.name)[[pvalueTest.name]]@typeI/niter,
-				typeII = slot(perf, test.name)[[pvalueTest.name]]@typeII/niter,
-				call = slot(perf, test.name)[[pvalueTest.name]]@call/niter,
-				# Variable denominator
-				familywiseI = c(na20(slot(perf, test.name)[[pvalueTest.name]]@familywiseI), as.double(!is.na(slot(perf, test.name)[[pvalueTest.name]]@familywiseI))),
-				# Variable denominator
-				familywiseII = c(na20(slot(perf, test.name)[[pvalueTest.name]]@familywiseII), as.double(!is.na(slot(perf, test.name)[[pvalueTest.name]]@familywiseII))),
-				# Variable denominator
-				pfdr = c(na20(slot(perf, test.name)[[pvalueTest.name]]@pfdr), as.double(!is.na(slot(perf, test.name)[[pvalueTest.name]]@pfdr))),
-				fdr = slot(perf, test.name)[[pvalueTest.name]]@fdr/niter,
-				fndr = slot(perf, test.name)[[pvalueTest.name]]@fndr/niter,
-				# Variable denominator
-				fpr = c(na20(slot(perf, test.name)[[pvalueTest.name]]@fpr), as.double(!is.na(slot(perf, test.name)[[pvalueTest.name]]@fpr))),
-				# Variable denominator
-				fnr = c(na20(slot(perf, test.name)[[pvalueTest.name]]@fnr), as.double(!is.na(slot(perf, test.name)[[pvalueTest.name]]@fnr))),
-				tp = slot(perf, test.name)[[pvalueTest.name]]@tp/niter,
-				fp = slot(perf, test.name)[[pvalueTest.name]]@fp/niter,
-				tn = slot(perf, test.name)[[pvalueTest.name]]@tn/niter,
-				fn = slot(perf, test.name)[[pvalueTest.name]]@fn/niter
+				# Create proportions with separate numerators and denominators for updating, not counting NAs
+				bias   = prop.init(slot(perf, test.name)[[pvalueTest.name]]@bias   ),
+				typeI  = prop.init(slot(perf, test.name)[[pvalueTest.name]]@typeI  ),
+				typeII = prop.init(slot(perf, test.name)[[pvalueTest.name]]@typeII ),
+				call   = prop.init(slot(perf, test.name)[[pvalueTest.name]]@call   ),
+				familywiseI  = prop.init(slot(perf, test.name)[[pvalueTest.name]]@familywiseI  ),
+				familywiseII = prop.init(slot(perf, test.name)[[pvalueTest.name]]@familywiseII ),
+				pfdr   = prop.init(slot(perf, test.name)[[pvalueTest.name]]@pfdr   ),
+				fdr    = prop.init(slot(perf, test.name)[[pvalueTest.name]]@fdr    ),
+				fndr   = prop.init(slot(perf, test.name)[[pvalueTest.name]]@fndr   ),
+				fpr    = prop.init(slot(perf, test.name)[[pvalueTest.name]]@fpr    ),
+				fnr    = prop.init(slot(perf, test.name)[[pvalueTest.name]]@fnr    ),
+				tp     = prop.init(slot(perf, test.name)[[pvalueTest.name]]@tp     ),
+				fp     = prop.init(slot(perf, test.name)[[pvalueTest.name]]@fp     ),
+				tn     = prop.init(slot(perf, test.name)[[pvalueTest.name]]@tn     ),
+				fn     = prop.init(slot(perf, test.name)[[pvalueTest.name]]@fn     )
 			)
-			names(comb.perf@bias) <- names(slot(perf, test.name)[[pvalueTest.name]]@bias)
-			names(comb.perf@typeI) <- names(slot(perf, test.name)[[pvalueTest.name]]@typeI)
-			names(comb.perf@typeII) <- names(slot(perf, test.name)[[pvalueTest.name]]@typeII)
-			names(comb.perf@call) <- names(slot(perf, test.name)[[pvalueTest.name]]@call)
 		}
 	} else {
 		# Otherwise update from perf
@@ -1704,39 +1712,40 @@ combine.pvalueTest.performance.iteratively = function(comb.perf=NULL, perf, iter
 		if(length(slot(perf, test.name)[[pvalueTest.name]]@bias)>0) {
 			stopifnot(is(comb.perf, "bmsim_test_performance"))
 
-			comb.perf@bias = comb.perf@bias + slot(perf, test.name)[[pvalueTest.name]]@bias/niter
-			comb.perf@typeI = comb.perf@typeI + slot(perf, test.name)[[pvalueTest.name]]@typeI/niter
-			comb.perf@typeII = comb.perf@typeII + slot(perf, test.name)[[pvalueTest.name]]@typeII/niter
-			comb.perf@call = comb.perf@call + slot(perf, test.name)[[pvalueTest.name]]@call/niter
-			# Variable denominator
-			comb.perf@familywiseI = comb.perf@familywiseI + c(na20(slot(perf, test.name)[[pvalueTest.name]]@familywiseI), as.double(!is.na(slot(perf, test.name)[[pvalueTest.name]]@familywiseI)))
-			# Variable denominator
-			comb.perf@familywiseII = comb.perf@familywiseII + c(na20(slot(perf, test.name)[[pvalueTest.name]]@familywiseII), as.double(!is.na(slot(perf, test.name)[[pvalueTest.name]]@familywiseII)))
-			# Variable denominator
-			comb.perf@pfdr = comb.perf@pfdr + c(na20(slot(perf, test.name)[[pvalueTest.name]]@pfdr), as.double(!is.na(slot(perf, test.name)[[pvalueTest.name]]@pfdr)))
-			comb.perf@fdr = comb.perf@fdr + slot(perf, test.name)[[pvalueTest.name]]@fdr/niter
-			comb.perf@fndr = comb.perf@fndr + slot(perf, test.name)[[pvalueTest.name]]@fndr/niter
-			# Variable denominator
-			comb.perf@fpr = comb.perf@fpr + c(na20(slot(perf, test.name)[[pvalueTest.name]]@fpr), as.double(!is.na(slot(perf, test.name)[[pvalueTest.name]]@fpr)))
-			# Variable denominator
-			comb.perf@fnr = comb.perf@fnr + c(na20(slot(perf, test.name)[[pvalueTest.name]]@fnr), as.double(!is.na(slot(perf, test.name)[[pvalueTest.name]]@fnr)))
-			comb.perf@tp = comb.perf@tp + slot(perf, test.name)[[pvalueTest.name]]@tp/niter
-			comb.perf@fp = comb.perf@fp + slot(perf, test.name)[[pvalueTest.name]]@fp/niter
-			comb.perf@tn = comb.perf@tn + slot(perf, test.name)[[pvalueTest.name]]@tn/niter
-			comb.perf@fn = comb.perf@fn + slot(perf, test.name)[[pvalueTest.name]]@fn/niter
+			# Update proportions with separate numerators and denominators for updating, not counting NAs
+			comb.perf@bias   = prop.update(comb.perf@bias   , slot(perf, test.name)[[pvalueTest.name]]@bias   )
+			comb.perf@typeI  = prop.update(comb.perf@typeI  , slot(perf, test.name)[[pvalueTest.name]]@typeI  )
+			comb.perf@typeII = prop.update(comb.perf@typeII , slot(perf, test.name)[[pvalueTest.name]]@typeII )
+			comb.perf@call   = prop.update(comb.perf@call   , slot(perf, test.name)[[pvalueTest.name]]@call   )
+			comb.perf@familywiseI  = prop.update(comb.perf@familywiseI  , slot(perf, test.name)[[pvalueTest.name]]@familywiseI  )
+			comb.perf@familywiseII = prop.update(comb.perf@familywiseII , slot(perf, test.name)[[pvalueTest.name]]@familywiseII )
+			comb.perf@pfdr   = prop.update(comb.perf@pfdr   , slot(perf, test.name)[[pvalueTest.name]]@pfdr   )
+			comb.perf@fdr    = prop.update(comb.perf@fdr    , slot(perf, test.name)[[pvalueTest.name]]@fdr    )
+			comb.perf@fndr   = prop.update(comb.perf@fndr   , slot(perf, test.name)[[pvalueTest.name]]@fndr   )
+			comb.perf@fpr    = prop.update(comb.perf@fpr    , slot(perf, test.name)[[pvalueTest.name]]@fpr    )
+			comb.perf@fnr    = prop.update(comb.perf@fnr    , slot(perf, test.name)[[pvalueTest.name]]@fnr    )
+			comb.perf@tp     = prop.update(comb.perf@tp     , slot(perf, test.name)[[pvalueTest.name]]@tp     )
+			comb.perf@fp     = prop.update(comb.perf@fp     , slot(perf, test.name)[[pvalueTest.name]]@fp     )
+			comb.perf@tn     = prop.update(comb.perf@tn     , slot(perf, test.name)[[pvalueTest.name]]@tn     )
+			comb.perf@fn     = prop.update(comb.perf@fn     , slot(perf, test.name)[[pvalueTest.name]]@fn     )
 
 			if(iter==niter) {
-				# Apply the denominators
-				m = length(comb.perf@familywiseI)/2
-				comb.perf@familywiseI = comb.perf@familywiseI[1:m]/comb.perf@familywiseI[m+1:m]
-				m = length(comb.perf@familywiseII)/2
-				comb.perf@familywiseII = comb.perf@familywiseII[1:m]/comb.perf@familywiseII[m+1:m]
-				m = length(comb.perf@pfdr)/2
-				comb.perf@pfdr = comb.perf@pfdr[1:m]/comb.perf@pfdr[m+1:m]
-				m = length(comb.perf@fpr)/2
-				comb.perf@fpr = comb.perf@fpr[1:m]/comb.perf@fpr[m+1:m]
-				m = length(comb.perf@fnr)/2
-				comb.perf@fnr = comb.perf@fpr[1:m]/comb.perf@fpr[m+1:m]
+				# Finalize proportions by dividing numerators by denominators
+				comb.perf@bias   = prop.final(comb.perf@bias   )
+				comb.perf@typeI  = prop.final(comb.perf@typeI  )
+				comb.perf@typeII = prop.final(comb.perf@typeII )
+				comb.perf@call   = prop.final(comb.perf@call   )
+				comb.perf@familywiseI  = prop.final(comb.perf@familywiseI  )
+				comb.perf@familywiseII = prop.final(comb.perf@familywiseII )
+				comb.perf@pfdr   = prop.final(comb.perf@pfdr   )
+				comb.perf@fdr    = prop.final(comb.perf@fdr    )
+				comb.perf@fndr   = prop.final(comb.perf@fndr   )
+				comb.perf@fpr    = prop.final(comb.perf@fpr    )
+				comb.perf@fnr    = prop.final(comb.perf@fnr    )
+				comb.perf@tp     = prop.final(comb.perf@tp     )
+				comb.perf@fp     = prop.final(comb.perf@fp     )
+				comb.perf@tn     = prop.final(comb.perf@tn     )
+				comb.perf@fn     = prop.final(comb.perf@fn     )
 			}
 		}
 	}
