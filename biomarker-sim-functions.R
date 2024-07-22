@@ -70,21 +70,23 @@ setClass("bmsim_analysisResults",
 setClass("bmsim_test_performance",
 	representation(
 		# Frequentist test performance
-		bias = "numeric",
-		typeI = "numeric",
-		typeII = "numeric",
-		call = "numeric",
-		familywiseI = "numeric",
-		familywiseII = "numeric",
-		pfdr = "numeric",
-		fdr = "numeric",
-		fndr = "numeric",
-		fpr = "numeric",
-		fnr = "numeric",
-		tp = "numeric",
-		fp = "numeric",
-		tn = "numeric",
-		fn = "numeric"
+		bias = "numeric",						# Estimate minus the truth
+		typeI = "numeric",						# Wrongly reject a true null hypothesis
+		typeII = "numeric",						# Fail to detect a true alternative hypothesis
+		call = "numeric",						# The estimate
+		familywiseI = "numeric",				# One or more type I errors
+		familywiseII = "numeric",				# One or more type II errors
+		strikeoutI = "numeric",					# Maximum number of type I errors
+		strikeoutII = "numeric",				# Maximum number of type II errors
+		pfdr = "numeric",						# Storey's expected proportion of false discoveries
+		fdr = "numeric",						# Benjamini and Hochberg's expected false discovery rate
+		fndr = "numeric",						# Similarly, expected false non-discovery rate
+		fpr = "numeric",						# Classical false positive rate
+		fnr = "numeric",						# Classical false negative rate
+		tp = "numeric",							# Mean number of true positives
+		fp = "numeric",							# Mean number of false positives
+		tn = "numeric",							# Mean number of true negatives
+		fn = "numeric"							# Mean number of false negatives
 	),
 	prototype(
 		# Frequentist test performance
@@ -94,6 +96,8 @@ setClass("bmsim_test_performance",
 		call = double(0),
 		familywiseI = double(0),
 		familywiseII = double(0),
+		strikeoutI = double(0),
+		strikeoutII = double(0),
 		pfdr = double(0),
 		fdr = double(0),
 		fndr = double(0),
@@ -227,8 +231,10 @@ setMethod("predict", "bmsim_analysisResults", function(object, newdata) {
 #     Hypothesis tests:
 #       Type I error loss
 #       Familywise type I error loss
+#       Strikeout type I error loss
 #       Type II error loss
 #       Familywise type II error loss
+#       Strikeout type II error loss
 #       False discovery rate
 #       False non-discovery rate
 #		False positive rate
@@ -256,6 +262,8 @@ calc.test.performance = function(test.signif, param.signif, param.names=NULL) {
 	if(!is.null(param.names)) stopifnot(length(test.signif)==length(param.names))
 	typeI = performance.typeI(test.signif, param.signif)
 	typeII = performance.typeII(test.signif, param.signif)
+	fpr = performance.error.rate(typeI, 1-param.signif) * na.if(all(param.signif==1))
+	fnr = performance.error.rate(typeII, param.signif) * na.if(all(param.signif==0))
 	ret = new("bmsim_test_performance",
 		bias = performance.bias(test.signif, param.signif),
 		typeI = typeI,
@@ -263,11 +271,13 @@ calc.test.performance = function(test.signif, param.signif, param.names=NULL) {
 		call = test.signif,
 		familywiseI = performance.familywise(typeI) * na.if(all(param.signif==1)),
 		familywiseII = performance.familywise(typeII) * na.if(all(param.signif==0)),
+		strikeoutI = floor(fpr),
+		strikeoutII = floor(fnr),
 		pfdr = performance.error.rate(typeI, test.signif) * na.if(all(test.signif==0)),
 		fdr = performance.error.rate(typeI, test.signif),
 		fndr = performance.error.rate(typeII, 1-test.signif),
-		fpr = performance.error.rate(typeI, 1-param.signif) * na.if(all(param.signif==1)),
-		fnr = performance.error.rate(typeII, param.signif) * na.if(all(param.signif==0)),
+		fpr = fpr,
+		fnr = fnr,
 		tp = sum( (1-typeI)*test.signif),
 		fp = sum(    typeI *test.signif),
 		tn = sum((1-typeII)*(1-test.signif)),
@@ -1537,6 +1547,8 @@ combine.test.performance = function(performance.list, test.name) {
 			call = rowMeans.robust(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@call)),
 			familywiseI = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@familywiseI), na.rm=TRUE),
 			familywiseII = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@familywiseII), na.rm=TRUE),
+			strikeoutI = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@strikeoutI), na.rm=TRUE),
+			strikeoutII = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@strikeoutII), na.rm=TRUE),
 			pfdr = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@pfdr), na.rm=TRUE),
 			fdr = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@fdr)),
 			fndr = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)@fndr)),
@@ -1594,6 +1606,8 @@ combine.test.performance.iteratively = function(comb.perf=NULL, perf, iter, nite
 				call   = prop.init(slot(perf, test.name)@call   ),
 				familywiseI  = prop.init(slot(perf, test.name)@familywiseI  ),
 				familywiseII = prop.init(slot(perf, test.name)@familywiseII ),
+				strikeoutI   = prop.init(slot(perf, test.name)@strikeoutI   ),
+				strikeoutII  = prop.init(slot(perf, test.name)@strikeoutII  ),
 				pfdr   = prop.init(slot(perf, test.name)@pfdr   ),
 				fdr    = prop.init(slot(perf, test.name)@fdr    ),
 				fndr   = prop.init(slot(perf, test.name)@fndr   ),
@@ -1618,6 +1632,8 @@ combine.test.performance.iteratively = function(comb.perf=NULL, perf, iter, nite
 			comb.perf@call   = prop.update(comb.perf@call   , slot(perf, test.name)@call   )
 			comb.perf@familywiseI  = prop.update(comb.perf@familywiseI  , slot(perf, test.name)@familywiseI  )
 			comb.perf@familywiseII = prop.update(comb.perf@familywiseII , slot(perf, test.name)@familywiseII )
+			comb.perf@strikeoutI   = prop.update(comb.perf@strikeoutI   , slot(perf, test.name)@strikeoutI   )
+			comb.perf@strikeoutII  = prop.update(comb.perf@strikeoutII  , slot(perf, test.name)@strikeoutII  )
 			comb.perf@pfdr   = prop.update(comb.perf@pfdr   , slot(perf, test.name)@pfdr   )
 			comb.perf@fdr    = prop.update(comb.perf@fdr    , slot(perf, test.name)@fdr    )
 			comb.perf@fndr   = prop.update(comb.perf@fndr   , slot(perf, test.name)@fndr   )
@@ -1636,6 +1652,8 @@ combine.test.performance.iteratively = function(comb.perf=NULL, perf, iter, nite
 				comb.perf@call   = prop.final(comb.perf@call   )
 				comb.perf@familywiseI  = prop.final(comb.perf@familywiseI  )
 				comb.perf@familywiseII = prop.final(comb.perf@familywiseII )
+				comb.perf@strikeoutI   = prop.final(comb.perf@strikeoutI   )
+				comb.perf@strikeoutII  = prop.final(comb.perf@strikeoutII  )
 				comb.perf@pfdr   = prop.final(comb.perf@pfdr   )
 				comb.perf@fdr    = prop.final(comb.perf@fdr    )
 				comb.perf@fndr   = prop.final(comb.perf@fndr   )
@@ -1662,6 +1680,8 @@ combine.pvalueTest.performance = function(performance.list, test.name, pvalueTes
 			call = rowMeans.robust(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)[[pvalueTest.name]]@call)),
 			familywiseI = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)[[pvalueTest.name]]@familywiseI), na.rm=TRUE),
 			familywiseII = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)[[pvalueTest.name]]@familywiseII), na.rm=TRUE),
+			strikeoutI = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)[[pvalueTest.name]]@strikeoutI), na.rm=TRUE),
+			strikeoutII = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)[[pvalueTest.name]]@strikeoutII), na.rm=TRUE),
 			pfdr = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)[[pvalueTest.name]]@pfdr), na.rm=TRUE),
 			fdr = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)[[pvalueTest.name]]@fdr)),
 			fndr = mean(sapply(1:nsim, function(i) slot(performance.list[[i]], test.name)[[pvalueTest.name]]@fndr)),
@@ -1695,6 +1715,8 @@ combine.pvalueTest.performance.iteratively = function(comb.perf=NULL, perf, iter
 				call   = prop.init(slot(perf, test.name)[[pvalueTest.name]]@call   ),
 				familywiseI  = prop.init(slot(perf, test.name)[[pvalueTest.name]]@familywiseI  ),
 				familywiseII = prop.init(slot(perf, test.name)[[pvalueTest.name]]@familywiseII ),
+				strikeoutI   = prop.init(slot(perf, test.name)[[pvalueTest.name]]@strikeoutI   ),
+				strikeoutII  = prop.init(slot(perf, test.name)[[pvalueTest.name]]@strikeoutII  ),
 				pfdr   = prop.init(slot(perf, test.name)[[pvalueTest.name]]@pfdr   ),
 				fdr    = prop.init(slot(perf, test.name)[[pvalueTest.name]]@fdr    ),
 				fndr   = prop.init(slot(perf, test.name)[[pvalueTest.name]]@fndr   ),
@@ -1719,6 +1741,8 @@ combine.pvalueTest.performance.iteratively = function(comb.perf=NULL, perf, iter
 			comb.perf@call   = prop.update(comb.perf@call   , slot(perf, test.name)[[pvalueTest.name]]@call   )
 			comb.perf@familywiseI  = prop.update(comb.perf@familywiseI  , slot(perf, test.name)[[pvalueTest.name]]@familywiseI  )
 			comb.perf@familywiseII = prop.update(comb.perf@familywiseII , slot(perf, test.name)[[pvalueTest.name]]@familywiseII )
+			comb.perf@strikeoutI   = prop.update(comb.perf@strikeoutI   , slot(perf, test.name)[[pvalueTest.name]]@strikeoutI   )
+			comb.perf@strikeoutII  = prop.update(comb.perf@strikeoutII  , slot(perf, test.name)[[pvalueTest.name]]@strikeoutII  )
 			comb.perf@pfdr   = prop.update(comb.perf@pfdr   , slot(perf, test.name)[[pvalueTest.name]]@pfdr   )
 			comb.perf@fdr    = prop.update(comb.perf@fdr    , slot(perf, test.name)[[pvalueTest.name]]@fdr    )
 			comb.perf@fndr   = prop.update(comb.perf@fndr   , slot(perf, test.name)[[pvalueTest.name]]@fndr   )
@@ -1737,6 +1761,8 @@ combine.pvalueTest.performance.iteratively = function(comb.perf=NULL, perf, iter
 				comb.perf@call   = prop.final(comb.perf@call   )
 				comb.perf@familywiseI  = prop.final(comb.perf@familywiseI  )
 				comb.perf@familywiseII = prop.final(comb.perf@familywiseII )
+				comb.perf@strikeoutI   = prop.final(comb.perf@strikeoutI   )
+				comb.perf@strikeoutII  = prop.final(comb.perf@strikeoutII  )
 				comb.perf@pfdr   = prop.final(comb.perf@pfdr   )
 				comb.perf@fdr    = prop.final(comb.perf@fdr    )
 				comb.perf@fndr   = prop.final(comb.perf@fndr   )
